@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>体素关卡编辑器 · 扭螺丝</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #14172a; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; -webkit-tap-highlight-color: transparent; color:#e8ecf7; }
+  #app { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; }
+
+  /* ---------- 通用面板 ---------- */
+  .panel {
+    background: rgba(28,33,55,0.86); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .panel h3 { font-size: 13px; font-weight: 800; letter-spacing:.5px; color:#aeb9e6; margin-bottom: 8px; text-transform: uppercase; }
+  .row { display:flex; gap:6px; flex-wrap: wrap; }
+  button.tool {
+    border:none; cursor:pointer; border-radius: 9px; padding: 8px 11px;
+    font-size: 13px; font-weight: 700; color:#dde4f7;
+    background: rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.08);
+    transition: all .15s; display:flex; align-items:center; gap:5px; white-space:nowrap;
+  }
+  button.tool:hover { background: rgba(255,255,255,0.14); }
+  button.tool.active { background: linear-gradient(135deg,#4f78ff,#43b9ff); color:#fff; border-color: transparent; box-shadow: 0 4px 12px rgba(60,120,255,.4); }
+  button.tool.danger.active { background: linear-gradient(135deg,#ff6b6b,#ff8e53); box-shadow: 0 4px 12px rgba(255,90,90,.4); }
+  button.tool.warn { background: rgba(255,180,80,0.12); color:#ffce8a; }
+  button.tool.ghost { background: transparent; }
+
+  /* ---------- 顶部工具栏 ---------- */
+  #toolbar {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 20; display:flex; gap: 8px; padding: 8px; align-items:center;
+  }
+  #toolbar .sep { width:1px; height: 26px; background: rgba(255,255,255,0.12); margin: 0 2px; }
+
+  /* ---------- 左侧：物件列表 ---------- */
+  #left-panel {
+    position:absolute; left: 12px; top: 70px; width: 210px; z-index: 18; padding: 14px;
+    max-height: calc(100% - 90px); display:flex; flex-direction:column;
+  }
+  #obj-list { display:flex; flex-direction:column; gap:6px; overflow-y:auto; margin: 6px 0 10px; }
+  #obj-list::-webkit-scrollbar { width:6px; } #obj-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius:3px; }
+  .obj-item {
+    display:flex; align-items:center; gap:8px; padding: 8px 10px; border-radius:10px; cursor:pointer;
+    background: rgba(255,255,255,0.05); border:1px solid transparent; transition: all .15s;
+  }
+  .obj-item:hover { background: rgba(255,255,255,0.1); }
+  .obj-item.active { background: rgba(79,120,255,0.22); border-color: rgba(79,120,255,0.6); }
+  .obj-swatch { width:16px; height:16px; border-radius:4px; flex:none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); }
+  .obj-name { flex:1; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .obj-count { font-size:11px; color:#8e9ac4; }
+  .obj-del { opacity:.5; font-size:14px; padding:0 2px; }
+  .obj-del:hover { opacity:1; color:#ff7a7a; }
+
+  /* ---------- 右侧：属性 / 工具 ---------- */
+  #right-panel {
+    position:absolute; right: 12px; top: 70px; width: 230px; z-index: 18; padding: 14px;
+    max-height: calc(100% - 90px); overflow-y:auto;
+  }
+  #right-panel::-webkit-scrollbar { width:6px; } #right-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius:3px; }
+  .field { margin-bottom: 14px; }
+  .field label { display:block; font-size:12px; color:#9aa6cf; margin-bottom:5px; font-weight:600; }
+  .field input[type=text] { width:100%; padding:7px 9px; border-radius:8px; border:1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.25); color:#fff; font-size:13px; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row input[type=range]{ flex:1; }
+  .slider-row span { font-size:12px; color:#cdd6f4; width:34px; text-align:right; }
+
+  .palette { display:grid; grid-template-columns: repeat(4,1fr); gap:7px; }
+  .swatch { width:100%; aspect-ratio:1; border-radius:8px; cursor:pointer; border:2px solid transparent; transition: transform .1s; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+  .swatch:hover { transform: scale(1.08); }
+  .swatch.active { border-color:#fff; box-shadow: 0 0 0 2px rgba(255,255,255,.5), inset 0 0 0 1px rgba(0,0,0,.25); }
+
+  .hint { font-size:11px; line-height:1.6; color:#7e8ab0; }
+  .badge-info { display:inline-block; background: rgba(255,255,255,.08); padding:2px 8px; border-radius:10px; font-size:11px; color:#aeb9e6; margin-top:4px; }
+
+  /* ---------- 底部状态栏 ---------- */
+  #statusbar {
+    position:absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 18; padding: 8px 16px; display:flex; gap:18px; align-items:center; font-size:12px;
+  }
+  #statusbar b { color:#ffe477; }
+
+  /* ---------- 模态框 ---------- */
+  #modal-mask { position:absolute; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background: rgba(8,10,20,.7); backdrop-filter: blur(4px); }
+  .modal { width: min(92vw, 560px); padding: 24px; }
+  .modal h2 { font-size:20px; margin-bottom:14px; color:#fff; }
+  .modal textarea { width:100%; height: 200px; resize:vertical; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.3); color:#cfe; font-size:12px; padding:10px; font-family: monospace; }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+  .btn-primary { border:none; cursor:pointer; border-radius:10px; padding:10px 20px; font-weight:700; font-size:14px; color:#fff; background: linear-gradient(135deg,#4f78ff,#43b9ff); }
+  .btn-secondary { border:none; cursor:pointer; border-radius:10px; padding:10px 20px; font-weight:700; font-size:14px; color:#cdd6f4; background: rgba(255,255,255,.1); }
+
+  #toast { position:absolute; bottom: 70px; left:50%; transform: translateX(-50%); background: rgba(0,0,0,.82); color:#fff; padding:10px 20px; border-radius:22px; font-size:14px; z-index:60; opacity:0; pointer-events:none; transition: opacity .25s; font-weight:600; }
+  #toast.show { opacity:1; }
+
+  a.backlink { position:absolute; left:12px; top:14px; z-index:30; color:#aeb9e6; text-decoration:none; font-size:13px; font-weight:700; padding:8px 12px; border-radius:10px; background: rgba(28,33,55,0.7); border:1px solid rgba(255,255,255,.1); }
+  a.backlink:hover { color:#fff; }
+
+  /* 关卡名输入（顶部左侧） */
+  #level-name-wrap { position:absolute; left:150px; top:14px; z-index:30; display:flex; align-items:center; gap:6px;
+    background: rgba(28,33,55,0.7); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:5px 10px; }
+  #level-name-wrap label { font-size:12px; color:#8e9ac4; font-weight:700; }
+  #level-name-input { background:transparent; border:none; outline:none; color:#fff; font-size:14px; font-weight:700; width:150px; }
+  #level-name-input:focus { border-bottom:1px solid #4f78ff; }
+
+  /* AI 生成模态：描述 + 图片 + 数量 */
+  #ai-mask { position:absolute; inset:0; z-index:55; display:none; align-items:center; justify-content:center; background: rgba(8,10,20,.7); backdrop-filter: blur(4px); }
+  #ai-modal { width:min(94vw, 600px); padding:24px; max-height:90vh; overflow-y:auto; }
+  #ai-modal h2 { font-size:20px; margin-bottom:6px; color:#fff; }
+  #ai-modal .sub { font-size:12px; color:#8e9ac4; margin-bottom:16px; line-height:1.6; }
+  #ai-modal .field { margin-bottom:14px; }
+  #ai-modal label { display:block; font-size:12px; color:#9aa6cf; margin-bottom:6px; font-weight:700; }
+  #ai-desc { width:100%; height:84px; resize:vertical; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.3); color:#e8ecf7; font-size:13px; padding:10px; font-family:inherit; }
+  #ai-endpoint { width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.25); color:#fff; font-size:12px; }
+  .ai-row { display:flex; gap:12px; flex-wrap:wrap; }
+  .ai-num { display:flex; align-items:center; gap:10px; }
+  .ai-num input[type=range]{ width:200px; }
+  .ai-num b { color:#ffe477; font-size:16px; min-width:24px; text-align:center; }
+  #ai-img-drop { border:1.5px dashed rgba(255,255,255,.2); border-radius:10px; padding:14px; text-align:center; font-size:12px; color:#8e9ac4; cursor:pointer; transition:all .15s; }
+  #ai-img-drop:hover { border-color:#4f78ff; color:#aeb9e6; }
+  #ai-img-preview { max-width:100%; max-height:140px; border-radius:8px; margin-top:10px; display:none; }
+  .ai-chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .ai-chip { font-size:12px; padding:4px 10px; border-radius:20px; background:rgba(79,120,255,.15); border:1px solid rgba(79,120,255,.3); color:#bcd0ff; cursor:pointer; }
+  .ai-chip:hover { background:rgba(79,120,255,.3); }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="backlink" href="index.html">← 返回游戏</a>
+  <a class="backlink" href="sculpt.html" style="left:auto; right:430px; background:rgba(255,90,160,.18); color:#ffb3d6;">🪶 雕塑编辑器</a>
+
+  <div id="level-name-wrap">
+    <label>关卡</label>
+    <input type="text" id="level-name-input" placeholder="关卡名称" maxlength="24" />
+  </div>
+
+  <div id="toolbar" class="panel">
+    <button class="tool active" data-tool="add" id="t-add">➕ 添加体素</button>
+    <button class="tool danger" data-tool="erase" id="t-erase">🧹 删除</button>
+    <span class="sep"></span>
+    <button class="tool" data-tool="screw" id="t-screw">🔩 螺丝</button>
+    <button class="tool" data-tool="screw-erase" id="t-screw-erase">✖ 删螺丝</button>
+    <span class="sep"></span>
+    <button class="tool" data-mode="plane" id="m-plane">▦ 平面模式</button>
+    <button class="tool active" data-mode="stack" id="m-stack">⬚ 堆叠模式</button>
+  </div>
+
+  <div id="left-panel" class="panel">
+    <h3>物件列表</h3>
+    <div id="obj-list"></div>
+    <button class="tool" id="btn-add-obj" style="justify-content:center;">＋ 新建物件</button>
+  </div>
+
+  <div id="right-panel" class="panel">
+    <div class="field">
+      <label>当前物件名称</label>
+      <input type="text" id="obj-name-input" placeholder="物件名称" />
+    </div>
+
+    <div class="field">
+      <label>体素颜色</label>
+      <div class="palette" id="voxel-palette"></div>
+    </div>
+
+    <div class="field">
+      <h3>物件变换</h3>
+      <label>位置 X <span id="lbl-px"></span></label>
+      <div class="slider-row"><input type="range" id="pos-x" min="-12" max="12" step="0.5" value="0"><span id="v-px">0</span></div>
+      <label>位置 Y <span id="lbl-py"></span></label>
+      <div class="slider-row"><input type="range" id="pos-y" min="-12" max="12" step="0.5" value="0"><span id="v-py">0</span></div>
+      <label>位置 Z <span id="lbl-pz"></span></label>
+      <div class="slider-row"><input type="range" id="pos-z" min="-12" max="12" step="0.5" value="0"><span id="v-pz">0</span></div>
+      <label>旋转 Y（度）</label>
+      <div class="slider-row"><input type="range" id="rot-y" min="0" max="345" step="15" value="0"><span id="v-ry">0</span></div>
+    </div>
+
+    <div class="field">
+      <h3>层级（拆解顺序）</h3>
+      <div class="slider-row"><input type="range" id="layer" min="0" max="6" step="1" value="0"><span id="v-layer">0</span></div>
+      <div class="hint">层级越大越靠外层，游戏中需先拆外层。同层可任意顺序拆。</div>
+    </div>
+
+    <div class="field">
+      <h3>螺丝</h3>
+      <div class="row">
+        <button class="tool" id="btn-auto-screw">⚡ 自动布点</button>
+        <button class="tool warn" id="btn-clear-screw">清空</button>
+      </div>
+      <label style="margin-top:10px;">随机配色 · 颜色种类数</label>
+      <div class="slider-row">
+        <input type="range" id="screw-colorcount" min="1" max="8" step="1" value="3">
+        <span id="v-screw-colorcount">3</span>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="tool" id="btn-rand-screw-color" style="flex:1;">🎲 随机螺丝颜色</button>
+      </div>
+      <label style="margin-top:10px;">自动布点颜色</label>
+      <div class="palette" id="screw-palette"></div>
+      <div class="hint" style="margin-top:6px;">「螺丝」工具点击体素面手动添加；选颜色后点已有螺丝可改色。「🎲随机螺丝颜色」对全场景已放好的螺丝按设定的颜色种类数重新平均随机配色（不改位置，每色保持 3 的倍数）。</div>
+    </div>
+  </div>
+
+  <div id="statusbar" class="panel">
+    <span>体素 <b id="stat-vox">0</b></span>
+    <span>螺丝 <b id="stat-screw">0</b></span>
+    <span>物件 <b id="stat-obj">0</b></span>
+    <span style="color:#7e8ab0;">滚轮缩放 · 右键拖动旋转视角</span>
+  </div>
+
+  <!-- 顶部右侧操作 -->
+  <div style="position:absolute; right:12px; top:14px; z-index:30; display:flex; gap:8px;">
+    <button class="tool" id="btn-ai" style="background:linear-gradient(135deg,#7a5cff,#43b9ff); color:#fff; border-color:transparent;">✨ AI 生成</button>
+    <button class="tool" id="btn-save">💾 保存</button>
+    <button class="tool" id="btn-export">📤 导出</button>
+    <button class="tool" id="btn-import">📥 导入</button>
+    <button class="tool warn" id="btn-test">▶ 试玩</button>
+  </div>
+
+  <div id="modal-mask">
+    <div class="modal panel">
+      <h2 id="modal-title">导出关卡</h2>
+      <textarea id="modal-text" spellcheck="false"></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="modal-cancel">关闭</button>
+        <button class="btn-primary" id="modal-ok">复制到剪贴板</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI 生成体素 -->
+  <div id="ai-mask">
+    <div id="ai-modal" class="panel">
+      <h2>✨ AI 生成体素模型</h2>
+      <div class="sub">用文字描述你想要的物体（可选上传一张参考图片），设定物件数量，系统会在人头模型附近自动生成体素模型。</div>
+
+      <div class="field">
+        <label>描述需求</label>
+        <textarea id="ai-desc" placeholder="例如：一颗红色的爱心 / 一棵绿色的小树 / 一个黄色五角星 / 字母 A"></textarea>
+        <div class="ai-chips" id="ai-chips"></div>
+      </div>
+
+      <div class="field">
+        <label>参考图片（可选，用于提取主色调）</label>
+        <div id="ai-img-drop">点击或拖拽上传图片</div>
+        <input type="file" id="ai-img-input" accept="image/*" style="display:none;" />
+        <img id="ai-img-preview" alt="预览" />
+      </div>
+
+      <div class="field">
+        <label>物件数量</label>
+        <div class="ai-num">
+          <input type="range" id="ai-count" min="1" max="6" step="1" value="1">
+          <b id="ai-count-val">1</b>
+          <span style="font-size:12px;color:#8e9ac4;">个独立物件（围绕人头分布）</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>自定义 LLM 接口（可选，留空则用内置生成器）</label>
+        <input type="text" id="ai-endpoint" placeholder="https://你的接口地址（需返回体素 JSON，详见提示）" />
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" id="ai-cancel">取消</button>
+        <button class="btn-primary" id="ai-generate">生成</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="./vendor/three.min.js"></script>
+<script src="./mannequin.js"></script>
+<script>
+(function(){
+  // 支持直接双击打开（file://），无需本地服务器。只在核心脚本确实加载失败时提示。
+  function showErr(msg){
+    if (document.getElementById('fatal-err')) return;
+    var box = document.createElement('div');
+    box.id = 'fatal-err';
+    box.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;max-width:90vw;background:#3a1320;color:#ffd9d9;border:1px solid #ff6b6b;border-radius:12px;padding:14px 18px;font:13px/1.6 "Microsoft YaHei",sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);';
+    box.innerHTML = '<b style="color:#ff9a9a">编辑器核心脚本未加载</b><br>' + msg
+      + '<br><span style="color:#caa">请确认 vendor/three.min.js、mannequin.js、editor.js 与本页面在同一目录下，未被移动或杀软拦截。</span>';
+    document.body.appendChild(box);
+  }
+  window.showEditorFatalError = showErr;
+  window.addEventListener('error', function(e){
+    if (e && e.target && e.target.tagName === 'SCRIPT') showErr('脚本文件加载失败：' + (e.target.getAttribute('src') || '内联脚本'));
+    // 普通运行期错误不再弹致命框盖屏
+  }, true);
+})();
+</script>
+<script src="./editor.js"></script>
+</body>
+</html>

@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>小体素雕塑编辑器 · 扭螺丝</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #11131f; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; -webkit-tap-highlight-color: transparent; color:#e8ecf7; }
+  #app { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; }
+
+  .panel {
+    background: rgba(24,28,46,0.88); backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+  }
+  .panel h3 { font-size: 12px; font-weight: 800; letter-spacing:.5px; color:#aeb9e6; margin-bottom: 8px; text-transform: uppercase; }
+  .row { display:flex; gap:6px; flex-wrap: wrap; }
+  button.tool {
+    border:none; cursor:pointer; border-radius: 9px; padding: 8px 11px;
+    font-size: 13px; font-weight: 700; color:#dde4f7;
+    background: rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.08);
+    transition: all .15s; display:flex; align-items:center; gap:5px; white-space:nowrap;
+  }
+  button.tool:hover { background: rgba(255,255,255,0.14); }
+  button.tool.active { background: linear-gradient(135deg,#7a4fff,#43b9ff); color:#fff; border-color: transparent; box-shadow: 0 4px 12px rgba(120,80,255,.4); }
+  button.tool.danger.active { background: linear-gradient(135deg,#ff6b6b,#ff8e53); box-shadow: 0 4px 12px rgba(255,90,90,.4); }
+  button.tool.warn { background: rgba(255,180,80,0.12); color:#ffce8a; }
+
+  #toolbar {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 20; display:flex; gap: 8px; padding: 8px; align-items:center; flex-wrap:wrap; max-width: calc(100% - 24px); justify-content:center;
+  }
+  #toolbar .sep { width:1px; height: 26px; background: rgba(255,255,255,0.12); margin: 0 2px; }
+
+  #left-panel {
+    position:absolute; left: 12px; top: 76px; width: 268px; z-index: 18; padding: 14px;
+    max-height: calc(100% - 96px); display:flex; flex-direction:column;
+  }
+  #obj-list { display:flex; flex-direction:column; gap:6px; overflow-y:auto; margin: 6px 0 10px; }
+  #obj-list::-webkit-scrollbar { width:6px; } #obj-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius:3px; }
+  .obj-item {
+    display:flex; align-items:center; gap:8px; padding: 8px 10px; border-radius:10px; cursor:pointer;
+    background: rgba(255,255,255,0.05); border:1px solid transparent; transition: all .15s;
+  }
+  .obj-item:hover { background: rgba(255,255,255,0.1); }
+  .obj-item.active { background: rgba(122,79,255,0.22); border-color: rgba(122,79,255,0.6); }
+  .obj-swatch { width:16px; height:16px; border-radius:4px; flex:none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); }
+  .obj-name { flex:1; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .obj-count { font-size:11px; color:#8e9ac4; }
+  .obj-del { opacity:.5; font-size:14px; padding:0 2px; cursor:pointer; flex:none; }
+  .obj-del:hover { opacity:1; color:#ff7a7a; }
+  .obj-op { opacity:.55; font-size:14px; padding:0 2px; cursor:pointer; flex:none; }
+  .obj-op:hover { opacity:1; color:#9fd0ff; }
+  .obj-item.hidden .obj-name { opacity:.4; text-decoration: line-through; }
+  .obj-item.hidden .obj-swatch { opacity:.4; }
+
+  #right-panel {
+    position:absolute; right: 12px; top: 76px; width: 240px; z-index: 18; padding: 14px;
+    max-height: calc(100% - 96px); overflow-y:auto;
+  }
+  #right-panel::-webkit-scrollbar { width:6px; } #right-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,.18); border-radius:3px; }
+  .field { margin-bottom: 14px; }
+  .field label { display:block; font-size:12px; color:#9aa6cf; margin-bottom:5px; font-weight:600; }
+  .field input[type=text] { width:100%; padding:7px 9px; border-radius:8px; border:1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.25); color:#fff; font-size:13px; }
+  .slider-row { display:flex; align-items:center; gap:8px; }
+  .slider-row input[type=range]{ flex:1; }
+  .slider-row span { font-size:12px; color:#cdd6f4; width:40px; text-align:right; }
+  input.num-in { width:62px; padding:4px 6px; border-radius:7px; border:1px solid rgba(255,255,255,.16); background: rgba(0,0,0,.3); color:#e8ecf8; font-size:12px; text-align:right; -moz-appearance:textfield; }
+  input.num-in:focus { outline:none; border-color:#43b9ff; }
+
+  /* 自定义颜色拾取（纯网页内，不弹系统取色器） */
+  .color-pick { display:flex; align-items:center; gap:10px; position:relative; }
+  .voxel-swatch { width:46px; height:38px; border-radius:10px; cursor:pointer; flex:none;
+    border:1px solid rgba(255,255,255,.3); box-shadow: inset 0 0 0 2px rgba(0,0,0,.25); background:#ffd166; transition: transform .1s; }
+  .voxel-swatch:hover { transform: scale(1.05); }
+  .color-hex { flex:1; }
+
+  /* 自绘 HSV 取色面板 */
+  .color-popover { display:none; margin-top:8px; padding:10px; border-radius:12px;
+    background: rgba(16,18,30,.96); border:1px solid rgba(255,255,255,.14); box-shadow:0 10px 26px rgba(0,0,0,.5); }
+  .color-popover.open { display:block; }
+  .cp-sv { position:relative; width:100%; height:120px; border-radius:8px; cursor:crosshair;
+    background:
+      linear-gradient(to top, #000, transparent),
+      linear-gradient(to right, #fff, transparent),
+      #ff0000;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); touch-action:none; }
+  .cp-thumb { position:absolute; width:14px; height:14px; border-radius:50%; transform:translate(-50%,-50%);
+    border:2px solid #fff; box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 1px 3px rgba(0,0,0,.6); pointer-events:none; }
+  .cp-hue-row { margin-top:10px; }
+  .cp-hue { -webkit-appearance:none; appearance:none; width:100%; height:14px; border-radius:7px; outline:none; cursor:pointer;
+    background: linear-gradient(to right,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000); }
+  .cp-hue::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:#fff; border:2px solid rgba(0,0,0,.4); cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.5); }
+  .cp-preview-row { display:flex; align-items:center; gap:8px; margin-top:10px; }
+  .cp-preview { width:34px; height:26px; border-radius:6px; border:1px solid rgba(255,255,255,.25); box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); background:#ffd166; flex:none; }
+  .cp-hex { flex:1; padding:6px 8px; border-radius:7px; border:1px solid rgba(255,255,255,.16); background:rgba(0,0,0,.3); color:#e8ecf8; font-size:12px; }
+  .cp-hex:focus { outline:none; border-color:#43b9ff; }
+  .recent { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .recent .chip { width:22px; height:22px; border-radius:6px; cursor:pointer; border:2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); }
+  .recent .chip.active { border-color:#fff; }
+
+  /* 8色螺丝面板 */
+  .palette { display:grid; grid-template-columns: repeat(4,1fr); gap:7px; }
+  .swatch { width:100%; aspect-ratio:1; border-radius:8px; cursor:pointer; border:2px solid transparent; transition: transform .1s; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+  .swatch:hover { transform: scale(1.08); }
+  .swatch.active { border-color:#fff; box-shadow: 0 0 0 2px rgba(255,255,255,.5), inset 0 0 0 1px rgba(0,0,0,.25); }
+
+  .hint { font-size:11px; line-height:1.6; color:#7e8ab0; }
+
+  .my-levels { display:flex; flex-direction:column; gap:8px; margin-top:8px; }
+  .my-level-item {
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:8px 10px; border-radius:10px;
+    background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08);
+  }
+  .my-level-item.active { border-color: rgba(122,79,255,.65); background: rgba(122,79,255,.18); }
+  .my-level-info { min-width:0; flex:1; }
+  .my-level-name { font-size:12px; font-weight:700; color:#e8ecf7; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .my-level-time { font-size:11px; color:#8e9ac4; margin-top:2px; }
+  .my-level-ops { display:flex; gap:6px; }
+  .my-level-ops .tool { padding:6px 8px; font-size:12px; }
+
+
+  #statusbar {
+    position:absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    z-index: 18; padding: 8px 16px; display:flex; gap:18px; align-items:center; font-size:12px;
+  }
+  #statusbar b { color:#ffe477; }
+
+  #modal-mask { position:absolute; inset:0; z-index:50; display:none; align-items:center; justify-content:center; background: rgba(8,10,20,.7); backdrop-filter: blur(4px); }
+  .modal { width: min(92vw, 560px); padding: 24px; }
+  .modal h2 { font-size:20px; margin-bottom:14px; color:#fff; }
+  .modal textarea { width:100%; height: 200px; resize:vertical; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.3); color:#cfe; font-size:12px; padding:10px; font-family: monospace; }
+  .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:16px; }
+  .btn-primary { border:none; cursor:pointer; border-radius:10px; padding:10px 20px; font-weight:700; font-size:14px; color:#fff; background: linear-gradient(135deg,#7a4fff,#43b9ff); }
+  .btn-secondary { border:none; cursor:pointer; border-radius:10px; padding:10px 20px; font-weight:700; font-size:14px; color:#cdd6f4; background: rgba(255,255,255,.1); }
+
+  #toast { position:absolute; bottom: 70px; left:50%; transform: translateX(-50%); background: rgba(0,0,0,.82); color:#fff; padding:10px 20px; border-radius:22px; font-size:14px; z-index:60; opacity:0; pointer-events:none; transition: opacity .25s; font-weight:600; }
+  #toast.show { opacity:1; }
+
+  /* 关卡可行解验证 */
+  #validate-mask { position:absolute; inset:0; z-index:58; display:none; align-items:center; justify-content:center; background: rgba(8,10,20,.7); backdrop-filter: blur(4px); }
+  #validate-modal { width:min(94vw, 540px); padding:24px; max-height:88vh; overflow-y:auto; }
+  #vd-head { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+  #vd-badge { width:52px; height:52px; flex:none; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:28px; background:rgba(80,220,140,.16); box-shadow: inset 0 0 0 1px rgba(80,220,140,.35); }
+  #validate-modal h2 { font-size:20px; color:#fff; margin:0; }
+  #vd-sub { font-size:12px; color:#8e9ac4; margin-top:3px; }
+  #vd-verdict { border-radius:12px; padding:14px 16px; margin-bottom:14px; font-size:15px; font-weight:800; line-height:1.5; }
+  #vd-verdict.ok { background:rgba(80,220,140,.14); border:1px solid rgba(80,220,140,.4); color:#8ff0bc; }
+  #vd-verdict.bad { background:rgba(255,90,90,.14); border:1px solid rgba(255,90,90,.4); color:#ff9a9a; }
+  .vd-stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .vd-stat { flex:1; min-width:96px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px 12px; }
+  .vd-stat .k { font-size:11px; color:#8e9ac4; }
+  .vd-stat .v { font-size:18px; font-weight:800; color:#e8ecf7; margin-top:2px; }
+  .vd-list { list-style:none; margin:0 0 6px; padding:0; }
+  .vd-list li { font-size:13px; line-height:1.65; padding:7px 10px 7px 30px; position:relative; border-radius:9px; margin-bottom:6px; }
+  .vd-list li.err { background:rgba(255,90,90,.1); color:#ffb4b4; }
+  .vd-list li.err::before { content:'✖'; position:absolute; left:10px; color:#ff6b6b; }
+  .vd-list li.warn { background:rgba(255,190,90,.1); color:#ffdca0; }
+  .vd-list li.warn::before { content:'!'; position:absolute; left:12px; font-weight:900; color:#ffbe5a; }
+  .vd-list li.ok { background:rgba(80,220,140,.1); color:#a6f0c8; }
+  .vd-list li.ok::before { content:'✓'; position:absolute; left:11px; color:#4dd07a; }
+  .vd-section-title { font-size:12px; font-weight:800; color:#aeb9e6; letter-spacing:.5px; text-transform:uppercase; margin:12px 0 8px; }
+
+  /* AI 生成模态：描述 + 图片 + 数量 */
+  #ai-mask { position:absolute; inset:0; z-index:55; display:none; align-items:center; justify-content:center; background: rgba(8,10,20,.7); backdrop-filter: blur(4px); }
+  #ai-modal { width:min(94vw, 600px); padding:24px; max-height:90vh; overflow-y:auto; }
+  #ai-modal h2 { font-size:20px; margin-bottom:6px; color:#fff; }
+  #ai-modal .sub { font-size:12px; color:#8e9ac4; margin-bottom:16px; line-height:1.6; }
+  #ai-modal .ai-field { margin-bottom:14px; }
+  #ai-modal .ai-field > label { display:block; font-size:12px; color:#9aa6cf; margin-bottom:6px; font-weight:700; }
+  #ai-desc { width:100%; height:84px; resize:vertical; border-radius:10px; border:1px solid rgba(255,255,255,.14); background:rgba(0,0,0,.3); color:#e8ecf7; font-size:13px; padding:10px; font-family:inherit; }
+  #ai-endpoint { width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.12); background:rgba(0,0,0,.25); color:#fff; font-size:12px; }
+  .ai-num { display:flex; align-items:center; gap:10px; }
+  .ai-num input[type=range]{ width:200px; }
+  .ai-num b { color:#ffe477; font-size:16px; min-width:24px; text-align:center; }
+  #ai-img-drop { border:1.5px dashed rgba(255,255,255,.2); border-radius:10px; padding:14px; text-align:center; font-size:12px; color:#8e9ac4; cursor:pointer; transition:all .15s; }
+  #ai-img-drop:hover { border-color:#7a4fff; color:#aeb9e6; }
+  #ai-img-preview { max-width:100%; max-height:140px; border-radius:8px; margin-top:10px; display:none; }
+  .ai-chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .ai-chip { font-size:12px; padding:4px 10px; border-radius:20px; background:rgba(122,79,255,.15); border:1px solid rgba(122,79,255,.35); color:#cdb3ff; cursor:pointer; }
+  .ai-chip:hover { background:rgba(122,79,255,.32); }
+
+  a.backlink { position:absolute; left:12px; top:14px; z-index:30; color:#aeb9e6; text-decoration:none; font-size:13px; font-weight:700; padding:8px 12px; border-radius:10px; background: rgba(24,28,46,0.7); border:1px solid rgba(255,255,255,.1); }
+  a.backlink:hover { color:#fff; }
+</style>
+</head>
+<body>
+<div id="app">
+  <a class="backlink" href="index.html">← 返回游戏</a>
+  <a class="backlink" href="editor.html" style="left:auto; right:340px; background:rgba(122,79,255,.18); color:#cdb3ff;">🧱 逐格编辑器</a>
+
+  <div id="toolbar" class="panel">
+    <button class="tool active" data-tool="add" id="t-add">🪶 雕刻</button>
+    <button class="tool danger" data-tool="erase" id="t-erase">🧹 削除</button>
+    <button class="tool" data-tool="paint" id="t-paint">🎨 上色</button>
+    <button class="tool" data-tool="pick" id="t-pick" title="吸色：点体素把它的颜色设为当前画笔色">💧 吸色</button>
+    <button class="tool" data-tool="locate" id="t-locate" title="定位：点任意方块直接选中它所属的物件">📍 定位</button>
+    <span class="sep"></span>
+    <button class="tool" data-tool="screw" id="t-screw">🔩 螺丝</button>
+    <button class="tool" data-tool="screw-erase" id="t-screw-erase">✖ 删螺丝</button>
+    <span class="sep"></span>
+    <button class="tool" data-mode="plane" id="m-plane">▦ 平面层</button>
+    <button class="tool active" data-mode="surface" id="m-surface">⛰ 贴面雕刻</button>
+  </div>
+
+  <div id="left-panel" class="panel">
+    <h3>物件列表</h3>
+    <div id="obj-list"></div>
+    <button class="tool" id="btn-add-obj" style="justify-content:center;">＋ 新建物件</button>
+    <button class="tool" id="btn-bind-obj" style="justify-content:center; margin-top:6px;">🔗 绑定物件</button>
+    <button class="tool" id="btn-dup-obj" style="justify-content:center; margin-top:6px;">⧉ 复制当前物件</button>
+    <button class="tool warn" id="btn-clear-objs" style="justify-content:center; margin-top:6px;">🗑 一键清空全部物件</button>
+  </div>
+
+  <div id="right-panel" class="panel">
+    <div class="field">
+      <label>当前物件名称</label>
+      <input type="text" id="obj-name-input" placeholder="物件名称" />
+    </div>
+
+    <div class="field">
+      <h3>体素尺寸（小体素）</h3>
+      <label>单个体素大小 <span style="color:#7e8ab0;">越小越精细（最小 0.01）</span></label>
+      <div class="slider-row"><input type="range" id="voxel-size" min="0.01" max="1" step="0.01" value="0.5"><span id="v-vsize">0.50</span></div>
+      <div class="hint" style="margin-top:6px;">可精细到 0.01：调小体素后可雕刻更精细的造型；每个物件可有独立尺寸。螺丝尺寸固定为 0.25，不随体素尺寸变化。</div>
+    </div>
+
+    <div class="field">
+      <h3>体素颜色（任意自选）</h3>
+      <div class="color-pick">
+        <!-- 自绘取色器：点击色块打开网页内取色面板，不再调用系统取色对话框（避免崩溃） -->
+        <div id="voxel-swatch" class="voxel-swatch" title="点击选择颜色"></div>
+        <input type="text" class="color-hex" id="voxel-hex" value="#ffd166" maxlength="7" />
+        <!-- 隐藏的原生输入仅作颜色状态载体，供旧逻辑读写 .value，用户不会点它 -->
+        <input type="color" id="voxel-color" value="#ffd166" style="display:none" tabindex="-1" aria-hidden="true" />
+      </div>
+      <div id="color-popover" class="color-popover">
+        <div id="cp-sv" class="cp-sv"><div id="cp-sv-thumb" class="cp-thumb"></div></div>
+        <div class="cp-hue-row">
+          <input type="range" id="cp-hue" class="cp-hue" min="0" max="360" step="1" value="45" />
+        </div>
+        <div class="cp-preview-row">
+          <div id="cp-preview" class="cp-preview"></div>
+          <input type="text" id="cp-hex" class="cp-hex" maxlength="7" value="#ffd166" />
+        </div>
+      </div>
+      <div class="recent" id="recent-colors"></div>
+      <label style="margin-top:10px;">体素透明度 <span style="color:#7e8ab0;">0=完全透明 · 1=完全不透明</span></label>
+      <div class="slider-row"><input type="range" id="voxel-alpha" min="0" max="1" step="0.05" value="1"><span id="v-valpha">1.00</span></div>
+    </div>
+
+    <div class="field">
+      <h3>层级（拆解顺序）</h3>
+      <div class="slider-row"><input type="range" id="layer" min="0" max="6" step="1" value="0"><span id="v-layer">0</span></div>
+      <div class="hint">层级越大越靠外层，游戏中需先拆外层。</div>
+    </div>
+
+    <div class="field">
+      <h3>物件变换</h3>
+      <label>位置 X <span style="color:#7e8ab0;">（可拖动或直接输入精确值）</span></label>
+      <div class="slider-row"><input type="range" id="pos-x" min="-14" max="14" step="0.1" value="0"><input type="number" id="v-px" class="num-in" step="0.01" value="0"></div>
+      <label>位置 Y</label>
+      <div class="slider-row"><input type="range" id="pos-y" min="-14" max="14" step="0.1" value="0"><input type="number" id="v-py" class="num-in" step="0.01" value="0"></div>
+      <label>位置 Z</label>
+      <div class="slider-row"><input type="range" id="pos-z" min="-14" max="14" step="0.1" value="0"><input type="number" id="v-pz" class="num-in" step="0.01" value="0"></div>
+      <label style="margin-top:8px;">旋转 X（度）<span style="color:#7e8ab0;">（绕物件中心）</span></label>
+      <div class="slider-row"><input type="range" id="rot-x" min="-180" max="180" step="1" value="0"><input type="number" id="v-rx" class="num-in" step="1" value="0"></div>
+      <label>旋转 Y（度）</label>
+      <div class="slider-row"><input type="range" id="rot-y" min="-180" max="180" step="1" value="0"><input type="number" id="v-ry" class="num-in" step="1" value="0"></div>
+      <label>旋转 Z（度）</label>
+      <div class="slider-row"><input type="range" id="rot-z" min="-180" max="180" step="1" value="0"><input type="number" id="v-rz" class="num-in" step="1" value="0"></div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool warn" id="btn-rot-reset" style="flex:1;">↺ 重置旋转</button>
+      </div>
+
+      <label style="margin-top:10px;">整体缩放 X</label>
+      <div class="slider-row"><input type="range" id="scale-x" min="0.2" max="4" step="0.05" value="1"><span id="v-sx">1.00</span></div>
+      <label>整体缩放 Y</label>
+      <div class="slider-row"><input type="range" id="scale-y" min="0.2" max="4" step="0.05" value="1"><span id="v-sy">1.00</span></div>
+      <label>整体缩放 Z</label>
+      <div class="slider-row"><input type="range" id="scale-z" min="0.2" max="4" step="0.05" value="1"><span id="v-sz">1.00</span></div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool" id="btn-scale-uniform" style="flex:1;">🔒 锁定三轴（整体缩放）</button>
+        <button class="tool warn" id="btn-scale-reset">↺ 重置</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <h3>体素几何预设 <span style="color:#7e8ab0;font-weight:normal;">正方体堆叠</span></h3>
+      <div class="hint" style="margin-bottom:6px;">选择一种几何体并设置尺寸，点击“生成”会用正方体体素堆叠出该几何体，作为一个新物件放入场景。尺寸决定几何体的整体大小（固定），体素大小只决定精细度：体素越小，体素数量越多、几何体越细致，整体大小不变。</div>
+      <div class="row">
+        <button class="tool active" data-gstack="cuboid" id="gs-cuboid">▭ 长方体</button>
+        <button class="tool" data-gstack="sphere" id="gs-sphere">● 球体</button>
+        <button class="tool" data-gstack="hemisphere" id="gs-hemisphere">◗ 半球</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool" data-gstack="cylinder" id="gs-cylinder">⬤ 圆柱</button>
+        <button class="tool" data-gstack="halfcylinder" id="gs-halfcylinder">◖ 半圆柱</button>
+        <button class="tool" data-gstack="cone" id="gs-cone">▽ 圆台/锥</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool" data-gstack="pyramid" id="gs-pyramid">△ 棱锥</button>
+        <button class="tool" data-gstack="torus" id="gs-torus">◯ 圆环</button>
+        <button class="tool" data-gstack="ellipsoid" id="gs-ellipsoid">⬭ 椭球</button>
+      </div>
+
+      <div id="gstack-params" style="margin-top:8px;padding:8px;border:1px solid #2b3350;border-radius:8px;background:#161a2b;">
+        <label style="color:#9fb0e0;">几何参数（整体尺寸，与体素大小无关）</label>
+        <div class="gsp-group" data-gsp="cuboid">
+          <label>长</label><div class="slider-row"><input type="range" id="gs-cuboid-w" min="1" max="48" step="1" value="12"><input type="number" id="v-gs-cuboid-w" class="num-in" step="1" value="12"></div>
+          <label>宽</label><div class="slider-row"><input type="range" id="gs-cuboid-d" min="1" max="48" step="1" value="8"><input type="number" id="v-gs-cuboid-d" class="num-in" step="1" value="8"></div>
+          <label>高</label><div class="slider-row"><input type="range" id="gs-cuboid-h" min="1" max="48" step="1" value="6"><input type="number" id="v-gs-cuboid-h" class="num-in" step="1" value="6"></div>
+        </div>
+        <div class="gsp-group" data-gsp="sphere" style="display:none;">
+          <label>半径</label><div class="slider-row"><input type="range" id="gs-sphere-r" min="1" max="24" step="1" value="8"><input type="number" id="v-gs-sphere-r" class="num-in" step="1" value="8"></div>
+        </div>
+        <div class="gsp-group" data-gsp="hemisphere" style="display:none;">
+          <label>半径</label><div class="slider-row"><input type="range" id="gs-hemisphere-r" min="1" max="24" step="1" value="9"><input type="number" id="v-gs-hemisphere-r" class="num-in" step="1" value="9"></div>
+        </div>
+        <div class="gsp-group" data-gsp="cylinder" style="display:none;">
+          <label>半径</label><div class="slider-row"><input type="range" id="gs-cylinder-r" min="1" max="24" step="1" value="7"><input type="number" id="v-gs-cylinder-r" class="num-in" step="1" value="7"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="gs-cylinder-h" min="1" max="48" step="1" value="12"><input type="number" id="v-gs-cylinder-h" class="num-in" step="1" value="12"></div>
+        </div>
+        <div class="gsp-group" data-gsp="halfcylinder" style="display:none;">
+          <label>半径</label><div class="slider-row"><input type="range" id="gs-halfcylinder-r" min="1" max="24" step="1" value="8"><input type="number" id="v-gs-halfcylinder-r" class="num-in" step="1" value="8"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="gs-halfcylinder-h" min="1" max="48" step="1" value="12"><input type="number" id="v-gs-halfcylinder-h" class="num-in" step="1" value="12"></div>
+        </div>
+        <div class="gsp-group" data-gsp="cone" style="display:none;">
+          <label>上半径 <span style="color:#7e8ab0;">0 = 圆锥</span></label><div class="slider-row"><input type="range" id="gs-cone-rt" min="0" max="24" step="1" value="0"><input type="number" id="v-gs-cone-rt" class="num-in" step="1" value="0"></div>
+          <label>下半径</label><div class="slider-row"><input type="range" id="gs-cone-rb" min="1" max="24" step="1" value="8"><input type="number" id="v-gs-cone-rb" class="num-in" step="1" value="8"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="gs-cone-h" min="1" max="48" step="1" value="14"><input type="number" id="v-gs-cone-h" class="num-in" step="1" value="14"></div>
+        </div>
+        <div class="gsp-group" data-gsp="pyramid" style="display:none;">
+          <label>棱数</label><div class="slider-row"><input type="range" id="gs-pyramid-n" min="3" max="12" step="1" value="4"><input type="number" id="v-gs-pyramid-n" class="num-in" step="1" value="4"></div>
+          <label>底半径</label><div class="slider-row"><input type="range" id="gs-pyramid-r" min="1" max="24" step="1" value="8"><input type="number" id="v-gs-pyramid-r" class="num-in" step="1" value="8"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="gs-pyramid-h" min="1" max="48" step="1" value="14"><input type="number" id="v-gs-pyramid-h" class="num-in" step="1" value="14"></div>
+          <label>顶部偏移中心（度）</label><div class="slider-row"><input type="range" id="gs-pyramid-off" min="-80" max="80" step="1" value="0"><input type="number" id="v-gs-pyramid-off" class="num-in" step="1" value="0"></div>
+        </div>
+        <div class="gsp-group" data-gsp="torus" style="display:none;">
+          <label>内直径</label><div class="slider-row"><input type="range" id="gs-torus-id" min="0" max="40" step="1" value="8"><input type="number" id="v-gs-torus-id" class="num-in" step="1" value="8"></div>
+          <label>外直径</label><div class="slider-row"><input type="range" id="gs-torus-od" min="2" max="48" step="1" value="18"><input type="number" id="v-gs-torus-od" class="num-in" step="1" value="18"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="gs-torus-h" min="1" max="24" step="1" value="6"><input type="number" id="v-gs-torus-h" class="num-in" step="1" value="6"></div>
+        </div>
+        <div class="gsp-group" data-gsp="ellipsoid" style="display:none;">
+          <label>X 半轴（左右）</label><div class="slider-row"><input type="range" id="gs-ellipsoid-rx" min="1" max="24" step="1" value="8"><input type="number" id="v-gs-ellipsoid-rx" class="num-in" step="1" value="8"></div>
+          <label>Y 半轴（上下）</label><div class="slider-row"><input type="range" id="gs-ellipsoid-ry" min="1" max="24" step="1" value="12"><input type="number" id="v-gs-ellipsoid-ry" class="num-in" step="1" value="12"></div>
+          <label>Z 半轴（前后）</label><div class="slider-row"><input type="range" id="gs-ellipsoid-rz" min="1" max="24" step="1" value="8"><input type="number" id="v-gs-ellipsoid-rz" class="num-in" step="1" value="8"></div>
+        </div>
+
+        <div style="margin-top:10px;border-top:1px solid #2b3350;padding-top:8px;">
+          <label style="color:#9fb0e0;">外观</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <span style="color:#7e8ab0;">颜色</span>
+            <input type="color" id="gs-color" value="#6cbcff" style="width:40px;height:26px;padding:0;border:1px solid #2b3350;border-radius:6px;background:#161a2b;cursor:pointer;">
+            <input type="text" id="v-gs-color" class="num-in" value="#6cbcff" style="width:88px;">
+          </div>
+          <label style="margin-top:6px;display:block;">体素大小（世界边长）</label>
+          <div class="slider-row"><input type="range" id="gs-voxel-size" min="0.1" max="1.5" step="0.02" value="0.24"><input type="number" id="v-gs-voxel-size" class="num-in" min="0.1" max="1.5" step="0.02" value="0.24"></div>
+        </div>
+      </div>
+      <button class="tool" id="gs-generate" style="margin-top:8px;width:100%;justify-content:center;background:#2a3350;">生成几何体</button>
+    </div>
+
+    <div class="field" style="display:none;">
+      <h3>笔刷</h3>
+      <label>笔刷大小（片状半径） <span id="lbl-brush"></span></label>
+      <div class="slider-row"><input type="range" id="brush-size" min="0" max="5" step="1" value="0"><span id="v-brush">0</span></div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool active" data-shape="square" id="sh-square">■ 方形片</button>
+        <button class="tool" data-shape="round" id="sh-round">● 圆形片</button>
+      </div>
+      <label style="margin-top:10px;">笔刷片朝向</label>
+      <div class="row">
+        <button class="tool active" data-brushorient="auto" id="bo-auto">🎯 自动</button>
+        <button class="tool" data-brushorient="horizontal" id="bo-h">▬ 水平横片</button>
+        <button class="tool" data-brushorient="vertical" id="bo-v">▮ 竖直竖片</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">半径 0 = 单格；半径越大一次铺的体素片越大。朝向：「自动」跟随点击面；「水平横片」始终平躺在水平面；「竖直竖片」始终立起并正对当前视角（转动视角即可改变竖片朝向）。</div>
+      <label style="margin-top:10px;">上色方式（🎨 上色工具）</label>
+      <div class="row">
+        <button class="tool" data-paintmode="face" id="pm-face">▣ 按面上色</button>
+        <button class="tool active" data-paintmode="all" id="pm-all">■ 整块上色</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">「按面上色」只给点击的那一个面上色（仅方块体素），可做多彩面；「整块上色」给整个体素上色并清除单面颜色。透明度仅对「整块上色」生效（保留原形状与单面覆盖）；新放置的体素会使用当前透明度。</div>
+    </div>
+
+    <div class="field" style="display:none;">
+      <h3>体素形状</h3>
+      <div class="row">
+        <button class="tool active" data-vshape="cube" id="vs-cube">⬛ 方块</button>
+        <button class="tool" data-vshape="half" id="vs-half">◗ 半圆</button>
+        <button class="tool" data-vshape="tri" id="vs-tri">◣ 三角</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool" data-vshape="sphere" id="vs-sphere">● 球</button>
+        <button class="tool" data-vshape="halfsphere" id="vs-halfsphere">◗ 半球</button>
+        <button class="tool" data-vshape="torus" id="vs-torus">◯ 圆环</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool" data-vshape="cylinder" id="vs-cylinder">⬤ 圆柱</button>
+        <button class="tool" data-vshape="halfcylinder" id="vs-halfcylinder">◖ 半圆柱</button>
+        <button class="tool" data-vshape="cone" id="vs-cone">▽ 圆台/锥</button>
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool" data-vshape="pyramid" id="vs-pyramid">△ 棱锥</button>
+        <button class="tool" data-vshape="torusp" id="vs-torusp">◍ 圆环柱</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">雕刻时使用所选形状；形状会自动朝向你点击的面。半圆/三角可做圆滑或斜切造型；球/半球/圆环为曲面造型。圆柱/半圆柱/圆台/棱锥/圆环柱为<b>参数化</b>形状，可在下方设置尺寸（世界单位，可超出单个体素格）。</div>
+
+      <!-- 参数化形状的参数输入面板：按当前选中形状显示对应一组 -->
+      <div id="shape-params" style="display:none;margin-top:8px;padding:8px;border:1px solid #2b3350;border-radius:8px;background:#161a2b;">
+        <label style="color:#9fb0e0;">形状参数（世界单位）</label>
+        <div class="sp-group" data-sp="cylinder" style="display:none;">
+          <label>半径</label><div class="slider-row"><input type="range" id="sp-cyl-r" min="0.1" max="4" step="0.05" value="0.5"><input type="number" id="v-sp-cyl-r" class="num-in" step="0.05" value="0.5"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="sp-cyl-h" min="0.1" max="8" step="0.05" value="1"><input type="number" id="v-sp-cyl-h" class="num-in" step="0.05" value="1"></div>
+        </div>
+        <div class="sp-group" data-sp="halfcylinder" style="display:none;">
+          <label>半径</label><div class="slider-row"><input type="range" id="sp-hcyl-r" min="0.1" max="4" step="0.05" value="0.5"><input type="number" id="v-sp-hcyl-r" class="num-in" step="0.05" value="0.5"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="sp-hcyl-h" min="0.1" max="8" step="0.05" value="1"><input type="number" id="v-sp-hcyl-h" class="num-in" step="0.05" value="1"></div>
+        </div>
+        <div class="sp-group" data-sp="cone" style="display:none;">
+          <label>上半径 <span style="color:#7e8ab0;">0 = 圆锥</span></label><div class="slider-row"><input type="range" id="sp-cone-rt" min="0" max="4" step="0.05" value="0.2"><input type="number" id="v-sp-cone-rt" class="num-in" step="0.05" value="0.2"></div>
+          <label>下半径</label><div class="slider-row"><input type="range" id="sp-cone-rb" min="0.05" max="4" step="0.05" value="0.5"><input type="number" id="v-sp-cone-rb" class="num-in" step="0.05" value="0.5"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="sp-cone-h" min="0.1" max="8" step="0.05" value="1"><input type="number" id="v-sp-cone-h" class="num-in" step="0.05" value="1"></div>
+        </div>
+        <div class="sp-group" data-sp="pyramid" style="display:none;">
+          <label>棱数</label><div class="slider-row"><input type="range" id="sp-pyr-n" min="3" max="12" step="1" value="4"><input type="number" id="v-sp-pyr-n" class="num-in" step="1" value="4"></div>
+          <label>底半径</label><div class="slider-row"><input type="range" id="sp-pyr-r" min="0.1" max="4" step="0.05" value="0.5"><input type="number" id="v-sp-pyr-r" class="num-in" step="0.05" value="0.5"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="sp-pyr-h" min="0.1" max="8" step="0.05" value="1"><input type="number" id="v-sp-pyr-h" class="num-in" step="0.05" value="1"></div>
+          <label>顶部偏移中心（度）</label><div class="slider-row"><input type="range" id="sp-pyr-off" min="-80" max="80" step="1" value="0"><input type="number" id="v-sp-pyr-off" class="num-in" step="1" value="0"></div>
+        </div>
+        <div class="sp-group" data-sp="torusp" style="display:none;">
+          <label>内直径</label><div class="slider-row"><input type="range" id="sp-tp-id" min="0" max="7" step="0.05" value="0.4"><input type="number" id="v-sp-tp-id" class="num-in" step="0.05" value="0.4"></div>
+          <label>外直径</label><div class="slider-row"><input type="range" id="sp-tp-od" min="0.1" max="8" step="0.05" value="1"><input type="number" id="v-sp-tp-od" class="num-in" step="0.05" value="1"></div>
+          <label>高度</label><div class="slider-row"><input type="range" id="sp-tp-h" min="0.1" max="8" step="0.05" value="0.4"><input type="number" id="v-sp-tp-h" class="num-in" step="0.05" value="0.4"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <h3>人形模特（参考）</h3>
+      <label>显示模特 <span style="color:#7e8ab0;">半透明参考，不参与导出</span></label>
+      <div class="row" style="margin-bottom:8px;">
+        <button class="tool active" id="btn-mann-toggle" style="flex:1;justify-content:center;">👤 模特：显示</button>
+      </div>
+      <label>位置 X</label>
+      <div class="slider-row"><input type="range" id="mann-x" min="-14" max="14" step="0.1" value="0"><input type="number" id="v-mann-x" class="num-in" step="0.01" value="0"></div>
+      <label>位置 Y</label>
+      <div class="slider-row"><input type="range" id="mann-y" min="-14" max="14" step="0.1" value="0"><input type="number" id="v-mann-y" class="num-in" step="0.01" value="0"></div>
+      <label>位置 Z</label>
+      <div class="slider-row"><input type="range" id="mann-z" min="-14" max="14" step="0.1" value="0"><input type="number" id="v-mann-z" class="num-in" step="0.01" value="0"></div>
+      <label style="margin-top:8px;">旋转 Y（度）</label>
+      <div class="slider-row"><input type="range" id="mann-rot" min="0" max="360" step="1" value="0"><input type="number" id="v-mann-rot" class="num-in" step="1" value="0"></div>
+      <label style="margin-top:8px;">整体缩放 <span style="color:#7e8ab0;">1× 为默认身高</span></label>
+      <div class="slider-row"><input type="range" id="mann-scale" min="0.2" max="4" step="0.05" value="1"><input type="number" id="v-mann-scale" class="num-in" step="0.05" value="1"></div>
+      <div class="row" style="margin-top:6px;">
+        <button class="tool warn" id="btn-mann-reset" style="flex:1;justify-content:center;">↺ 重置模特位置/缩放</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">调整人形模特的位置、朝向与大小，用于围绕它雕刻定位。该设置随关卡保存。</div>
+    </div>
+
+    <div class="field" style="display:none;">
+      <h3>体素大小</h3>
+      <div class="row">
+        <button class="tool" data-vmult="0.25" id="vm-0.25">0.25× 精细</button>
+        <button class="tool" data-vmult="0.5" id="vm-0.5">0.5× 小块</button>
+        <button class="tool active" data-vmult="1" id="vm-1">1× 常规</button>
+        <button class="tool" data-vmult="1.5" id="vm-1.5">1.5× 中块</button>
+        <button class="tool" data-vmult="2" id="vm-2">2× 大块</button>
+        <button class="tool" data-vmult="3" id="vm-3">3× 超大</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">选择非 1× 尺寸后，每次点击将放置一个占用对应比例空间的体素（0.25×/0.5× 更精细，1.5×/2×/3× 更大），可与其它尺寸在同一个物件里自由混搭、精确贴合摆放；若目标位置放不下会提示冲突。放置时不再展开笔刷片，一次只放一个。</div>
+    </div>
+
+    <div class="field" style="display:none;">
+      <h3>🎨 按颜色批量调整（当前物件）</h3>
+      <label>选择要调整的颜色（点击色块）</label>
+      <div class="recent" id="obj-color-list"></div>
+      <label style="margin-top:10px;">透明度 <span style="color:#7e8ab0;">作用于所选颜色的全部体素</span></label>
+      <div class="slider-row"><input type="range" id="bulk-alpha" min="0" max="1" step="0.05" value="1"><span id="v-bulkalpha">1.00</span></div>
+      <label style="margin-top:10px;">色度（明暗）</label>
+      <div class="row">
+        <button class="tool" id="btn-shade-dark" style="flex:1;">－ 减色度（变暗）</button>
+        <button class="tool" id="btn-shade-light" style="flex:1;">＋ 加色度（变亮）</button>
+      </div>
+      <div class="hint" style="margin-top:6px;">先点上方色块选中一种颜色，再拖动透明度、或点加/减色度，会一次性作用于当前物件里该颜色的所有体素。加/减色度后色块会更新为新的颜色。</div>
+    </div>
+
+
+
+    <div class="field">
+      <h3>螺丝（表面 · 8 色）</h3>
+      <label>螺丝布局方式 <span style="color:#7e8ab0;">未选择时不可试玩</span></label>
+      <div class="row" style="margin-bottom:6px;">
+        <button class="tool" data-screwmode="manual" id="sm-manual" style="flex:1;justify-content:center;">✋ 手动布置</button>
+        <button class="tool" data-screwmode="auto" id="sm-auto" style="flex:1;justify-content:center;">⚡ 自动布置</button>
+      </div>
+      <div class="hint" style="margin-bottom:8px;">「手动布置」：试玩时螺丝颜色/位置与你在编辑器里摆的<b>完全一致</b>（不换色、不重排）。「自动布置」：进场按可行解自动配色（保留原玩法）。螺丝大小已自动跟随体素大小。</div>
+      <label style="margin-top:8px;">布点总数（3 的倍数） <span style="color:#7e8ab0;">「⚡全局布点」自动随机 30–108</span></label>
+      <div class="slider-row">
+        <input type="range" id="screw-count" min="3" max="108" step="3" value="18">
+        <span id="v-screw-count">18</span>
+      </div>
+      <label style="margin-top:8px;">螺丝颜色种类数</label>
+      <div class="slider-row">
+        <input type="range" id="screw-colorcount" min="1" max="8" step="1" value="3">
+        <span id="v-screw-colorcount">3</span>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="tool" id="btn-auto-screw-all">⚡ 全局布点</button>
+        <button class="tool" id="btn-auto-screw">本物件布点</button>
+        <button class="tool warn" id="btn-clear-screw">清空</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button class="tool" id="btn-rand-screw-color" style="flex:1;">🎲 整体置换配色</button>
+      </div>
+      <label style="margin-top:10px;">手动螺丝颜色</label>
+      <div class="palette" id="screw-palette"></div>
+      <div class="hint" style="margin-top:6px;">「⚡全局布点」每次<b>随机</b>选一个 <b>30–108</b> 的螺丝总数（3 的倍数），并按各物件的<b>体素总数比例</b>把螺丝分配到各物件，位置也随机分散（每次布点位置不同）；颜色按设定种类数布点（每种为 3 的倍数）。「本物件布点」仅对当前选中物件按表面智能聚类。<b style="color:#ffe477;">「🎲整体置换配色」</b>把当前用到的每种颜色<b>一一映射</b>换成另一种颜色（如红→黄、黄→灰），只换色号、不改位置与分组，因此已固化的<b>通关流程仍然有效</b>。也可用「螺丝」工具手动点任意物件外露面添加，选色后点已有螺丝可改色（支持跨物件）。<br><b style="color:#9ff0c0;">提示：</b>点「✅验证可解」通过后，本关的一套<b>通关流程（螺丝颜色+需求顺序）会被固化保存</b>，游戏进场直接使用它，不再随机重排；改动螺丝/层级会使其失效，需重新验证。</div>
+    </div>
+
+    <div class="field" style="display:none;">
+      <h3>我的自定义关卡</h3>
+      <div class="row" style="margin-bottom:8px;">
+        <input type="text" id="level-name" placeholder="输入关卡名称（如：汉堡大冒险）" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.3);color:#e8ecf7;font-size:13px;font-family:inherit;" />
+      </div>
+      <div class="row">
+        <button class="tool" id="btn-quick-save">⚡ 快速保存</button>
+        <button class="tool" id="btn-save-as-new">➕ 另存为新关卡</button>
+      </div>
+      <div class="my-levels" id="my-levels"></div>
+      <div class="hint" style="margin-top:6px;">可直接加载继续编辑，或删除不需要的关卡。导入 JSON 后也会自动加入这里。</div>
+    </div>
+  </div>
+
+  <div id="statusbar" class="panel">
+    <span>体素 <b id="stat-vox">0</b></span>
+    <span>螺丝 <b id="stat-screw">0</b></span>
+    <span>物件 <b id="stat-obj">0</b></span>
+    <span style="color:#7e8ab0;">滚轮缩放 · 右键拖动旋转</span>
+  </div>
+
+  <div style="position:absolute; right:12px; top:14px; z-index:30; display:flex; gap:8px;">
+    <button class="tool" id="btn-ai" style="background:linear-gradient(135deg,#7a4fff,#43b9ff); color:#fff; border-color:transparent;">✨ AI 生成</button>
+    <button class="tool" id="btn-save">💾 保存</button>
+    <button class="tool" id="btn-export" title="导出为本地 .json 文件">📤 导出文件</button>
+    <button class="tool" id="btn-import" title="从本地 .json 文件导入">📥 导入文件</button>
+    <button class="tool" id="btn-validate" title="根据当前螺丝摆放，做层级检测+射线遮挡检测+5颗容错模拟，判断关卡是否有可行解" style="background:rgba(80,220,140,.16); color:#9ff0c0; border-color:rgba(80,220,140,.35);">✅ 验证可解</button>
+    <button class="tool warn" id="btn-test">▶ 试玩</button>
+  </div>
+
+  <div id="modal-mask">
+    <div class="modal panel">
+      <h2 id="modal-title">导出关卡</h2>
+      <textarea id="modal-text" spellcheck="false"></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="modal-cancel">关闭</button>
+        <button class="btn-primary" id="modal-ok">复制到剪贴板</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI 生成体素 -->
+  <div id="ai-mask">
+    <div id="ai-modal" class="panel">
+      <h2>✨ AI 生成体素模型</h2>
+      <div class="sub">选择下方<b style="color:#cdb3ff;">预设物品</b>直接生成体素模型。中心与人头对齐，且<b style="color:#ff5d5d;">自动删除与人头重合的体素</b>。</div>
+
+      <div class="ai-field">
+        <label>选择预设物品</label>
+        <div class="ai-chips" id="ai-chips"></div>
+      </div>
+
+      <div class="ai-field">
+        <label>物件数量（决定拆成几个组件）</label>
+        <div class="ai-num">
+          <input type="range" id="ai-count" min="5" max="40" step="1" value="7">
+          <b id="ai-count-val">7</b>
+          <span style="font-size:12px;color:#8e9ac4;">个组件（优先按结构层拆分，数量多则再均等细分）</span>
+        </div>
+      </div>
+
+      <div class="ai-field">
+        <label>体素总数预算 <span style="color:#7e8ab0;font-weight:400;">（0 = 不限制；设定后按此总数匹配分辨率并均分到各件）</span></label>
+        <div class="ai-num" style="gap:10px;">
+          <input type="number" id="ai-budget" class="num-in" style="width:90px;" step="50" min="0" value="0">
+          <span style="font-size:12px;color:#8e9ac4;">每件约 <b id="ai-budget-per" style="color:#9fd0ff;">—</b> 个体素</span>
+        </div>
+      </div>
+
+      <div class="ai-field">
+        <label>体素大小（决定精细度）</label>
+        <div class="ai-num">
+          <input type="range" id="ai-voxel" min="0.12" max="0.6" step="0.02" value="0.24">
+          <b id="ai-voxel-val">0.24</b>
+          <span style="font-size:12px;color:#8e9ac4;">单个体素越小越精细，物品自动细分保持整体尺寸</span>
+        </div>
+      </div>
+
+      <div class="ai-field">
+        <label>整体大小 / 缩放 <span style="color:#7e8ab0;font-weight:400;">（相对人头直径，可拖动或直接输入）</span></label>
+        <div class="ai-num">
+          <input type="range" id="ai-scale" min="0.5" max="6" step="0.1" value="2.6">
+          <input type="number" id="ai-scale-val" class="num-in" step="0.1" min="0.1" value="2.6">
+          <span style="font-size:12px;color:#8e9ac4;">数值越大物品越大（≈ 该倍数 × 头直径）</span>
+        </div>
+      </div>
+
+      <div class="ai-field">
+        <label>位置偏移 <span style="color:#7e8ab0;font-weight:400;">（相对人头中心，0 即对齐头部；单位为世界坐标）</span></label>
+        <div class="ai-num" style="gap:10px;">
+          <span style="font-size:12px;color:#9aa6cf;">X</span>
+          <input type="number" id="ai-pos-x" class="num-in" step="0.1" value="0">
+          <span style="font-size:12px;color:#9aa6cf;">Y</span>
+          <input type="number" id="ai-pos-y" class="num-in" step="0.1" value="0">
+          <span style="font-size:12px;color:#9aa6cf;">Z</span>
+          <input type="number" id="ai-pos-z" class="num-in" step="0.1" value="0">
+        </div>
+      </div>
+
+      <div class="ai-field">
+        <label>颜色相似度（决定各物件配色的统一程度）</label>
+        <div class="ai-num">
+          <input type="range" id="ai-similarity" min="0" max="100" step="5" value="0">
+          <b id="ai-similarity-val">0%</b>
+          <span style="font-size:12px;color:#8e9ac4;">越相似 → 每个物件配色越偏向单一（其代表色）；越不相似 → 越接近预设的丰富配色</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" id="ai-cancel">取消</button>
+        <button class="btn-primary" id="ai-generate">生成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关卡可行解验证结果 -->
+  <div id="validate-mask">
+    <div id="validate-modal" class="panel">
+      <div id="vd-head">
+        <div id="vd-badge">✅</div>
+        <div>
+          <h2 id="vd-title">关卡验证</h2>
+          <div id="vd-sub">层级检测 · 射线遮挡检测 · 5 颗容错模拟</div>
+        </div>
+      </div>
+      <div id="vd-body"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="vd-close">关闭</button>
+        <button class="btn-primary" id="vd-recheck">重新验证</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="./vendor/three.min.js"></script>
+<script src="./mannequin.js"></script>
+<script>
+(function(){
+  // 说明：本编辑器支持「直接双击 sculpt.html（file://）」打开使用，无需本地服务器。
+  // 只有在核心脚本（three.min.js / mannequin.js / sculpt.js）确实没能加载出来时才提示，
+  // 不再因运行期的偶发异常把整个界面判死（那会让人误以为三角等功能不可用）。
+  function showErr(msg){
+    if (document.getElementById('fatal-err')) return;
+    var box = document.createElement('div');
+    box.id = 'fatal-err';
+    box.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;max-width:90vw;background:#3a1320;color:#ffd9d9;border:1px solid #ff6b6b;border-radius:12px;padding:14px 18px;font:13px/1.6 "Microsoft YaHei",sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);';
+    box.innerHTML = '<b style="color:#ff9a9a">编辑器核心脚本未加载</b><br>' + msg
+      + '<br><span style="color:#caa">请确认 vendor/three.min.js、mannequin.js、sculpt.js 与本页面在同一目录下，未被移动或杀软拦截。</span>';
+    document.body.appendChild(box);
+  }
+  window.showEditorFatalError = showErr;
+
+  // 记录脚本文件是否真的加载失败（区别于普通运行期异常）
+  window.__scriptLoadFail = null;
+  window.addEventListener('error', function(e){
+    if (e && e.target && e.target.tagName === 'SCRIPT') {
+      window.__scriptLoadFail = e.target.getAttribute('src') || '内联脚本';
+      showErr('脚本文件加载失败：' + window.__scriptLoadFail);
+    }
+    // 普通运行期错误不再弹致命框，避免误伤（如需排查可在控制台查看）
+  }, true);
+})();
+</script>
+<script src="./sculpt.js?v=grid50x50-1"></script>
+
+
+
+
+
+
+
+
+
+
+<script>
+// 就绪自检：等待脚本执行后，只在核心库确实缺失时提示；正常则什么都不做。
+(function(){
+  function check(){
+    if (window.__scriptLoadFail) return;                 // 已由 error 事件报过
+    if (!window.THREE) { window.showEditorFatalError && window.showEditorFatalError('未检测到 THREE（vendor/three.min.js 未成功加载）。'); return; }
+    if (!window.createMannequin) { window.showEditorFatalError && window.showEditorFatalError('未检测到 createMannequin（mannequin.js 未成功加载）。'); return; }
+    // THREE 与 mannequin 均在 → 编辑器可正常使用（含三角形体素），不再提示。
+  }
+  if (document.readyState === 'complete') setTimeout(check, 0);
+  else window.addEventListener('load', function(){ setTimeout(check, 0); });
+})();
+</script>
+</body>
+</html>

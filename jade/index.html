@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>玉石刮一刮 · 翡翠原石</title>
+<style>
+  :root{
+    --wood:#c8823c; --wood-d:#8a4f1e; --wood-l:#e6a95c; --gold:#ffd24d; --green:#3fae4a;
+    --paper:#fff4dc; --ink:#4a2f14; --red:#e05a3c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;user-select:none;
+    background:#2a1a0e;color:#4a2f14}
+  /* 古风店铺场景背景 */
+  #scene{position:fixed;inset:0;
+    background:
+      radial-gradient(120% 60% at 50% 6%, rgba(255,220,150,.35), transparent 60%),
+      linear-gradient(180deg,#7c4a22 0%, #a2673a 14%, #c89a63 15%, #e7cfa9 100%);
+  }
+  #scene::before{ /* 上部砖墙 */
+    content:"";position:absolute;top:0;left:0;right:0;height:15%;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.08) 0 1px, transparent 1px 26px),
+      repeating-linear-gradient(90deg, rgba(0,0,0,.10) 0 1px, transparent 1px 54px),
+      linear-gradient(180deg,#6f3f1c,#8a5228);
+    box-shadow:inset 0 -8px 16px rgba(0,0,0,.3);
+  }
+  #scene::after{ /* 地面木纹 */
+    content:"";position:absolute;bottom:0;left:0;right:0;height:20%;
+    background:linear-gradient(180deg, rgba(140,90,40,.0), rgba(120,74,30,.4));
+    box-shadow:inset 0 10px 20px rgba(0,0,0,.15);
+  }
+  canvas{position:fixed;inset:0;display:block;width:100%;height:100%;z-index:2}
+
+  /* 顶部标题栏 */
+  #titlebar{position:fixed;top:0;left:0;right:0;z-index:6;height:52px;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,rgba(60,34,14,.9),rgba(60,34,14,.6));color:#ffe9c0;font-weight:800;letter-spacing:3px;font-size:18px;
+    text-shadow:0 2px 4px #000;border-bottom:2px solid rgba(0,0,0,.3)}
+  #asset{position:fixed;top:9px;right:16px;z-index:7;background:rgba(0,0,0,.35);border:1px solid rgba(255,210,120,.5);
+    border-radius:20px;padding:6px 16px;color:var(--gold);font-weight:800;font-size:15px}
+  #asset small{color:#ffe9c0;font-weight:500;font-size:11px;margin-right:5px}
+
+  /* 左上三块价格木牌（仿截图斜挂） */
+  #signs{position:fixed;top:70px;left:18px;z-index:6;display:flex;flex-direction:column;gap:10px}
+  .sign{position:relative;background:linear-gradient(180deg,#f2b24a,#d97e28);border:3px solid #7a3f15;
+    border-radius:10px;padding:8px 20px 8px 16px;min-width:150px;box-shadow:0 6px 14px rgba(0,0,0,.35);
+    transform:rotate(-3deg);transform-origin:left center}
+  .sign:nth-child(2){transform:rotate(-1.5deg) translateX(10px)}
+  .sign:nth-child(3){transform:rotate(-4deg) translateX(-2px)}
+  .sign:nth-child(4){transform:rotate(-2deg) translateX(6px)}
+  .sign:nth-child(5){transform:rotate(-3.5deg) translateX(-3px)}
+  .sign .val.spend{color:#c85a1a}
+  .sign::before{content:"";position:absolute;top:-11px;left:14px;width:9px;height:9px;border-radius:50%;
+    background:#4a2f14;box-shadow:0 0 0 3px rgba(0,0,0,.15)}
+  .sign .lab{font-size:12px;color:#5a2c0a;font-weight:700;letter-spacing:1px;text-shadow:0 1px 0 rgba(255,255,255,.3)}
+  .sign .val{font-size:22px;font-weight:900;line-height:1.05;text-shadow:0 1px 0 rgba(255,255,255,.25)}
+  .sign .val.pos{color:#166b1e}.sign .val.neg{color:#c02a12}.sign .val.cost{color:#3a2410}
+  .sign::after{content:"";position:absolute;right:-13px;top:50%;transform:translateY(-50%);
+    border-top:16px solid transparent;border-bottom:16px solid transparent;border-left:14px solid #d97e28}
+
+  /* 左下 AI 提示 */
+  #aibox{position:fixed;left:18px;bottom:120px;z-index:6;width:270px;padding:12px 14px;border-radius:14px;
+    background:rgba(60,34,14,.82);color:#ffe9c0;border:1px solid rgba(255,210,120,.4);box-shadow:0 6px 16px rgba(0,0,0,.4);display:none}
+  #aibox .hd{font-size:12px;color:var(--gold);font-weight:800;margin-bottom:5px}
+  #aibox .tx{font-size:12.5px;line-height:1.7}#aibox .em{color:#7cf08a;font-weight:800}#aibox .warn{color:#ffcf6b;font-weight:800}
+
+  /* 底部工具条（刷子大小） */
+  #dock{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;max-width:96vw}
+  .brushbar{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#b5762f,#8a5220);
+    border:3px solid #5a3210;border-radius:30px;padding:8px 18px;box-shadow:0 6px 16px rgba(0,0,0,.4)}
+  .brushbar .rb{width:34px;height:34px;border-radius:50%;background:#f2c869;border:2px solid #7a3f15;color:#5a2c0a;
+    font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1}
+  .brushbar .rb:active{transform:scale(.92)}
+  .brushbar input[type=range]{-webkit-appearance:none;width:180px;height:12px;border-radius:8px;
+    background:linear-gradient(90deg,#5a3210,#c89a63);outline:none}
+  .brushbar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+    background:radial-gradient(circle at 35% 30%,#fff2c8,#e0a63e);border:2px solid #7a3f15;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+  .brushbar .lbl{color:#ffe9c0;font-size:11px;font-weight:700;min-width:52px;text-align:center}
+
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:24px;padding:12px 22px;font-size:15px;font-weight:800;color:#fff;letter-spacing:1px;
+    background:linear-gradient(180deg,#54c15e,#2f8a3a);border:2px solid #1f6b28;box-shadow:0 5px 14px rgba(0,0,0,.35);transition:.14s}
+  button:hover{filter:brightness(1.06);transform:translateY(-2px)}button:active{transform:translateY(0)}
+  button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.5);transform:none}
+  button .c{display:block;font-size:11px;font-weight:600;opacity:.9;margin-top:1px}
+  button.gold{background:linear-gradient(180deg,#ffd24d,#e0a020);border-color:#a9761a;color:#5a3200}
+  button.wood{background:linear-gradient(180deg,#c8823c,#8a4f1e);border-color:#5a3210;color:#fff2d8}
+  button.red{background:linear-gradient(180deg,#f0785c,#c0331a);border-color:#8a2410}
+
+  #hint{position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:5;color:#4a2f14;font-size:13px;font-weight:600;
+    background:rgba(255,244,220,.75);padding:5px 16px;border-radius:16px;pointer-events:none}
+
+  /* 右侧面板 */
+  #panel{position:fixed;top:0;right:0;bottom:0;width:340px;max-width:88vw;z-index:8;transform:translateX(105%);
+    transition:transform .38s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;
+    background:linear-gradient(180deg,#fdf1d6,#f3e0b8);border-left:4px solid #b5762f;box-shadow:-14px 0 40px rgba(0,0,0,.4);color:#4a2f14}
+  #panel.open{transform:translateX(0)}
+  #panel .ph{padding:18px 18px 12px;font-size:17px;font-weight:900;border-bottom:2px dashed #c8a86a;display:flex;justify-content:space-between;align-items:center}
+  #panel .ph .x{cursor:pointer;font-size:20px;color:#a06a2a;background:none;border:none;box-shadow:none;padding:2px 8px}
+  #panel .pb{padding:16px;overflow-y:auto;flex:1}
+  #panel .pf{padding:14px 16px;border-top:2px dashed #c8a86a}
+  #panel .pb::-webkit-scrollbar{width:8px}#panel .pb::-webkit-scrollbar-thumb{background:#c8a86a;border-radius:8px}
+
+  .stone-card{border-radius:14px;padding:14px;margin-bottom:12px;cursor:pointer;transition:.15s;border:2px solid #d9be8a;background:#fffaf0;position:relative;overflow:hidden}
+  .stone-card:hover{border-color:var(--green);transform:translateY(-2px)}
+  .stone-card .t{font-size:16px;font-weight:900}.stone-card .s{font-size:12px;color:#a07840;margin:2px 0 8px}
+  .stone-card .p{color:#c0331a;font-weight:900;font-size:18px}.stone-card .d{font-size:12px;color:#8a6838;margin-top:6px;line-height:1.5}
+  .stone-card .tag{position:absolute;top:12px;right:12px;font-size:11px;padding:3px 10px;border-radius:10px;font-weight:800;color:#fff}
+  .tag-normal{background:#9a8a6a}.tag-fine{background:#4a8ad0}.tag-rare{background:#a05ad0}.tag-king{background:linear-gradient(90deg,#e0a020,#e0651a)}
+
+  .infocard{border:2px solid #d9be8a;background:#fffaf0;border-radius:12px;padding:12px;margin-bottom:12px}
+  .infocard .it{font-size:12px;color:#a07840;margin-bottom:6px;font-weight:700}
+  .info-row{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}.info-row .v{font-weight:800}
+
+  .prod{display:flex;align-items:center;gap:10px;border:2px solid #d9be8a;border-radius:12px;padding:10px 12px;margin-bottom:10px;cursor:pointer;transition:.15s;background:#fffaf0}
+  .prod:hover{border-color:var(--green)}.prod.sel{border-color:#e0a020;background:#fff6df}
+  .prod .ic{width:40px;height:40px;flex:none;border-radius:10px;background:#f0e4c8;display:flex;align-items:center;justify-content:center;font-size:22px}
+  .prod .mn{font-weight:800;font-size:14px}.prod .mh{font-size:11px;color:#a07840;margin-top:2px}
+
+  .placed-item{display:flex;justify-content:space-between;align-items:center;border:2px solid #d9be8a;border-radius:10px;padding:8px 12px;margin-bottom:8px;font-size:13px;background:#fffaf0}
+  .placed-item .pv{color:#166b1e;font-weight:900}.placed-item .del{cursor:pointer;color:var(--red);margin-left:8px;font-weight:900}
+  .total{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .total .tl{font-size:13px;color:#a07840}.total .tv{font-size:26px;font-weight:900;color:#166b1e}
+  .empty{color:#a07840;text-align:center;padding:32px 12px;font-size:13px;line-height:1.8}
+
+  #toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-16px);z-index:50;padding:11px 22px;border-radius:14px;font-weight:800;color:#fff;
+    opacity:0;pointer-events:none;transition:.3s;background:#3a8a44;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}#toast.bad{background:#c0331a}#toast.gold{background:#e0a020;color:#5a3200}
+
+  /* 刮到裂缝：纯利润处飘落的“↓1000”（比数字大、80%透明度） */
+  .crackfx{position:fixed;z-index:9;pointer-events:none;font-weight:900;color:#c02a12;opacity:.8;
+    font-size:48px;line-height:1;text-shadow:0 3px 6px rgba(0,0,0,.45);white-space:nowrap;
+    animation:crackFloat 1.15s ease-out forwards}
+  @keyframes crackFloat{0%{transform:translateY(2px) scale(.9);opacity:.8}
+    18%{transform:translateY(-4px) scale(1.05);opacity:.8}
+    100%{transform:translateY(-54px) scale(1);opacity:0}}
+
+  .mask{position:fixed;inset:0;z-index:80;background:rgba(30,18,8,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center}
+  .mask.show{display:flex}
+  .modal{width:430px;max-width:90vw;border-radius:20px;padding:28px;text-align:center;background:linear-gradient(180deg,#fff6e2,#f2e0bc);border:3px solid #e0a020;box-shadow:0 20px 50px rgba(0,0,0,.5);color:#4a2f14}
+  .modal h2{font-size:22px;color:#c0651a;margin-bottom:8px}.modal p{color:#8a6838;line-height:1.8;font-size:14px}
+  .modal .big{font-size:42px;font-weight:900;color:#166b1e;margin:12px 0}
+  .modal .btns{display:flex;gap:12px;margin-top:18px}.modal .btns button{flex:1}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;font-size:11px;color:#8a6838;margin-top:8px}
+  .legend span{display:inline-flex;align-items:center;gap:4px}.legend i{width:11px;height:11px;border-radius:3px}
+</style>
+</head>
+<body>
+  <div id="scene"></div>
+  <canvas id="game"></canvas>
+
+  <div id="titlebar">玉 石 刮 一 刮</div>
+  <div id="asset"><small>资产</small><span id="assetVal">0</span></div>
+
+  <div id="signs">
+    <div class="sign"><div class="lab">原石购入价</div><div class="val cost" id="sgCost">0</div></div>
+    <div class="sign"><div class="lab">原石直接售卖价</div><div class="val" id="sgNow">???</div></div>
+    <div class="sign"><div class="lab">💎 打成品预估价</div><div class="val" id="sgCraft">???</div></div>
+    <div class="sign"><div class="lab">🖌️ 累计刮石成本</div><div class="val" id="sgScrape">0</div></div>
+    <div class="sign"><div class="lab">纯利润 (直售−购入−刮石)</div><div class="val" id="sgProfit">—</div></div>
+  </div>
+
+  <div id="hint"></div>
+  <div id="dock"></div>
+
+  <div id="panel">
+    <div class="ph"><span id="panelTitle">原石市场</span><button class="x" id="panelClose">✕</button></div>
+    <div class="pb" id="panelBody"></div>
+    <div class="pf" id="panelFoot"></div>
+  </div>
+
+  <div id="toast"></div>
+  <div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+function rand(a,b){return a+Math.random()*(b-a);}
+function randi(a,b){return Math.floor(rand(a,b+1));}
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+function lerp(a,b,t){return a+(b-a)*t;}
+function fmt(n){n=Math.round(n);return (n<0?'-':'')+Math.abs(n).toLocaleString('en-US');}
+
+/* ---------- 数据表 ---------- */
+const SEEDS=[{name:'豆种',coef:1.0,qmax:0.30},{name:'糯种',coef:2.0,qmax:0.55},{name:'冰种',coef:4.0,qmax:0.80},{name:'玻璃种',coef:7.5,qmax:1.01}];
+function seedOf(q){for(const s of SEEDS)if(q<s.qmax)return s;return SEEDS[3];}
+const COLORS={
+  none:{name:'无色',coef:0.5,rgb:[224,230,222]},
+  floating:{name:'飘花',coef:1.4,rgb:[134,200,182]},
+  purple:{name:'紫罗兰',coef:2.6,rgb:[186,143,216]},
+  apple:{name:'苹果绿',coef:3.2,rgb:[116,208,110]},
+  yang:{name:'阳绿',coef:5.0,rgb:[60,200,90]},
+  emperor:{name:'帝王绿',coef:9.0,rgb:[10,150,70]},
+};
+const STONES=[
+  {key:'normal',t:'普通场口料',s:'缅甸·大马坎',price:2000,tag:'tag-normal',tn:'普通',d:'性价比之选，多为豆种，偶有惊喜。',blobs:[2,3],qbias:0,rare:0.05},
+  {key:'fine',t:'精选莫西沙',s:'缅甸·莫西沙',price:6000,tag:'tag-fine',tn:'精品',d:'种水普遍偏好，冰种概率提升。',blobs:[2,4],qbias:0.18,rare:0.18},
+  {key:'rare',t:'老坑帝王料',s:'缅甸·木那',price:15000,tag:'tag-rare',tn:'稀有',d:'高绿高冰，赌性十足，风险与机遇并存。',blobs:[3,4],qbias:0.32,rare:0.38},
+  {key:'king',t:'传世天工料',s:'缅甸·帕敢',price:38000,tag:'tag-king',tn:'王者',d:'传说场口，玻璃种帝王绿可期，赌性极高。',blobs:[3,5],qbias:0.46,rare:0.62},
+];
+const MODELS={
+  ring:{name:'戒指面',hint:'小蛋面·易出',base:1300,icon:'💍',shape:'ellipse',rx:2.5,ry:3.5},
+  peace:{name:'平安扣',hint:'圆环带孔·中等',base:2600,icon:'⭕',shape:'ring',r:6,hole:2.4},
+  pendant:{name:'挂件牌',hint:'方牌·中等',base:3400,icon:'🔲',shape:'rect',w:9,h:12},
+  bangle:{name:'玉镯',hint:'大件·难出·价高',base:7000,icon:'⚪',shape:'ring',r:12,hole:8},
+};
+const PHASE={SHOP:'SHOP',SCRAPE:'SCRAPE',CRAFT:'CRAFT'};
+const GRID=52;                 // 石头/翡翠网格
+const VALUE_SCALE=0.55;        // 翡翠单格价值系数（下调以提高亏本概率）
+const SCRAPE_PER=2.6;          // 每露出一格的刮石成本
+const CRACK_PENALTY=1000;      // 刮到裂缝：每次赔钱额（纯利润扣减）
+const CRACK_COOLDOWN=500;      // 连续拖动刮裂缝的扣钱冷却(ms)，避免一次刮出大量扣钱
+
+const G={coin:20000,phase:PHASE.SHOP,stone:null,inventory:[],
+  brush:14,craftModel:null,craftScale:1,placed:[],cursor:{x:GRID/2,y:GRID/2}};
+
+function toast(m,k){const t=$('#toast');t.textContent=m;t.className='show'+(k?' '+k:'');clearTimeout(t._tm);t._tm=setTimeout(()=>t.className='',1800);}
+/* 刮到裂缝：在“纯利润”木牌处飘一个比数字大、80%透明度的“↓1000” */
+function showCrackFx(amount){
+  const sign=$('#sgProfit');if(!sign)return;
+  const r=sign.getBoundingClientRect();
+  const el=document.createElement('div');
+  el.className='crackfx';el.textContent='↓'+fmt(amount);
+  el.style.left=(r.left)+'px';
+  el.style.top=(r.top-6)+'px';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1250);
+}
+
+/* ---------- 噪声 ---------- */
+function fract(x){return x-Math.floor(x);}
+function h3(x,y,z){return fract(Math.sin(x*127.1+y*311.7+z*74.7)*43758.5453);}
+function vnoise(x,y,z){
+  const xi=Math.floor(x),yi=Math.floor(y),zi=Math.floor(z);
+  const xf=x-xi,yf=y-yi,zf=z-zi;
+  const u=xf*xf*(3-2*xf),v=yf*yf*(3-2*yf),w=zf*zf*(3-2*zf);
+  const g=(a,b,c)=>h3(xi+a,yi+b,zi+c);
+  const x00=lerp(g(0,0,0),g(1,0,0),u),x10=lerp(g(0,1,0),g(1,1,0),u);
+  const x01=lerp(g(0,0,1),g(1,0,1),u),x11=lerp(g(0,1,1),g(1,1,1),u);
+  return lerp(lerp(x00,x10,v),lerp(x01,x11,v),w);
+}
+function fbm(x,y,z){let a=0,f=1,amp=0.5;for(let i=0;i<4;i++){a+=amp*vnoise(x*f,y*f,z*f);f*=2;amp*=0.5;}return a;}
+
+/* ======================================================================
+   翡翠横截面生成
+   ====================================================================== */
+function pickColor(q){
+  const r=Math.random();
+  if(q>0.75)return r<0.35?'emperor':r<0.65?'yang':r<0.85?'apple':'floating';
+  if(q>0.5)return r<0.15?'emperor':r<0.4?'yang':r<0.65?'apple':r<0.8?'purple':'floating';
+  if(q>0.28)return r<0.1?'yang':r<0.35?'apple':r<0.55?'purple':r<0.8?'floating':'none';
+  return r<0.15?'apple':r<0.35?'floating':'none';
+}
+function genJade(type){
+  const n=GRID*GRID;
+  const q=new Float32Array(n),crack=new Uint8Array(n),jade=new Uint8Array(n);
+  const col=new Array(n).fill('none');
+  const nb=randi(type.blobs[0],type.blobs[1]);
+  const blocks=[];
+  for(let i=0;i<nb;i++){
+    let cq=clamp(rand(0.05,0.7)+type.qbias,0,1);
+    if(Math.random()<type.rare)cq=clamp(cq+rand(0.2,0.4),0,1);
+    blocks.push({cx:rand(10,GRID-10),cy:rand(10,GRID-10),rx:rand(5,10),ry:rand(5,10),rot:rand(0,Math.PI),cq,color:pickColor(cq)});
+  }
+  const cosr=blocks.map(b=>Math.cos(-b.rot)),sinr=blocks.map(b=>Math.sin(-b.rot));
+  for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){
+    const idx=y*GRID+x;let bestQ=0,bestC='none';
+    for(let bi=0;bi<blocks.length;bi++){
+      const b=blocks[bi],dx=x-b.cx,dy=y-b.cy;
+      const lx=dx*cosr[bi]-dy*sinr[bi],ly=dx*sinr[bi]+dy*cosr[bi];
+      const d=Math.sqrt(lx*lx/(b.rx*b.rx)+ly*ly/(b.ry*b.ry))+(vnoise(x*0.32,y*0.32,bi)-0.5)*0.26;
+      if(d<1.05){const fo=clamp(1-d,0,1);const lq=b.cq*(0.45+0.55*fo);if(lq>bestQ){bestQ=lq;bestC=b.color;}}
+    }
+    if(bestQ>0.03){jade[idx]=1;q[idx]=bestQ;col[idx]=(bestQ<0.12&&Math.random()<0.5)?'none':bestC;}
+  }
+  const nc=randi(1,3);const cracks=[];
+  for(let i=0;i<nc;i++){let px=rand(6,GRID-6),py=rand(6,GRID-6),ang=rand(0,6.28);const len=randi(12,26);
+    const path=[{x:px,y:py}];
+    for(let s=0;s<len;s++){ang+=rand(-0.45,0.45);px+=Math.cos(ang);py+=Math.sin(ang);
+      path.push({x:px,y:py});
+      const xi=px|0,yi=py|0;
+      if(xi>=0&&xi<GRID&&yi>=0&&yi<GRID){crack[yi*GRID+xi]=1;}}
+    cracks.push(path);
+  }
+  return {q,col,crack,jade,cracks};
+}
+function cellColorRGB(jd,idx){
+  if(!jd.jade[idx])return [206,198,182];
+  const c=COLORS[jd.col[idx]],qq=jd.q[idx];let r=c.rgb.slice();
+  const t=clamp((qq-0.4)*0.8,0,0.45);
+  return [lerp(r[0],255,t),lerp(r[1],255,t),lerp(r[2],255,t)];
+}
+function cellValue(jd,idx){
+  if(!jd.jade[idx])return 0;
+  const s=seedOf(jd.q[idx]),c=COLORS[jd.col[idx]];
+  let v=6*s.coef*c.coef*(0.6+jd.q[idx]);
+  if(jd.crack[idx])v*=0.15;
+  return v;
+}
+function renderJadeCanvas(jd,px){
+  const cvs=document.createElement('canvas');cvs.width=GRID*px;cvs.height=GRID*px;const x=cvs.getContext('2d');
+  for(let gy=0;gy<GRID;gy++)for(let gx=0;gx<GRID;gx++){
+    const idx=gy*GRID+gx;const c=cellColorRGB(jd,idx);
+    x.fillStyle=`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;x.fillRect(gx*px,gy*px,px+1,px+1);
+    if(jd.jade[idx]&&jd.q[idx]>0.6){x.fillStyle=`rgba(255,255,255,${(jd.q[idx]-0.6)*0.45})`;x.beginPath();x.arc(gx*px+px*0.5,gy*px+px*0.5,px*0.42,0,7);x.fill();}
+  }
+  // 真实发丝状裂纹（连续平滑细线 + 微高光）
+  x.lineCap='round';x.lineJoin='round';
+  (jd.cracks||[]).forEach(path=>{
+    if(path.length<2)return;
+    const draw=(off,color,w)=>{
+      x.beginPath();x.moveTo(path[0].x*px, path[0].y*px+off);
+      for(let i=1;i<path.length-1;i++){
+        const mx=(path[i].x+path[i+1].x)/2*px, my=(path[i].y+path[i+1].y)/2*px+off;
+        x.quadraticCurveTo(path[i].x*px, path[i].y*px+off, mx, my);
+      }
+      x.strokeStyle=color;x.lineWidth=w;x.stroke();
+    };
+    draw(0.6*px*0.14,'rgba(255,255,255,.28)',Math.max(1,px*0.10)); // 高光偏移
+    draw(0,'rgba(35,22,12,.55)',Math.max(1.2,px*0.16));           // 主裂纹
+  });
+  return cvs;
+}
+
+/* ======================================================================
+   石头 & 刮开
+   ====================================================================== */
+const cv=$('#game'),ctx=cv.getContext('2d');
+let box={x:0,y:0,w:0,h:0};
+let outline=[];       // 石头轮廓(canvas坐标)
+
+function makeOutline(cx,cy,R,seed){
+  const pts=[];const N=randi(11,15);
+  for(let i=0;i<N;i++){
+    const a=i/N*Math.PI*2;
+    const r=R*(0.78+0.30*fbm(Math.cos(a)*1.6+seed,Math.sin(a)*1.6,seed*0.7));
+    pts.push([cx+Math.cos(a)*r*1.08, cy+Math.sin(a)*r*0.92]);
+  }
+  return pts;
+}
+function pip(px,py,pts){let c=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const xi=pts[i][0],yi=pts[i][1],xj=pts[j][0],yj=pts[j][1];if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi))c=!c;}return c;}
+
+/* 半写实石皮纹理 */
+function makeSkin(w,h,seed){
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  const img=x.createImageData(w,h);
+  for(let py=0;py<h;py++)for(let px=0;px<w;px++){
+    const i=(py*w+px)*4;
+    const u=px/w*5+seed,v=py/h*5;
+    let n=fbm(u,v,0.5)*0.7+fbm(u*3,v*3,2.2)*0.3;
+    let base=128+n*70;
+    const grain=(h3(px*1.7,py*2.3,7)-0.5)*22;
+    base+=grain;
+    // 立体明暗：左上亮右下暗
+    const shade=((px/w)*0.5+(py/h)*0.5-0.5)*-44;
+    let r=base*0.92+shade, g=base*0.9+shade, b=base*0.86+shade;
+    img.data[i]=clamp(r,40,235);img.data[i+1]=clamp(g,40,232);img.data[i+2]=clamp(b,40,225);img.data[i+3]=255;
+  }
+  x.putImageData(img,0,0);
+  // 黑色斑点（截图的矿点）
+  const spots=randi(14,26);
+  for(let s=0;s<spots;s++){const sx=rand(0,w),sy=rand(0,h),sr=rand(2,7);
+    x.fillStyle=`rgba(40,32,24,${rand(0.25,0.6)})`;x.beginPath();x.arc(sx,sy,sr,0,7);x.fill();}
+  // 暗角
+  const g=x.createRadialGradient(w*0.42,h*0.4,w*0.2,w*0.5,h*0.5,w*0.62);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.4)');
+  x.fillStyle=g;x.fillRect(0,0,w,h);
+  return c;
+}
+
+let skinCanvas=null,skinCtx=null,jadeCanvas=null;
+
+function buildStone(type){
+  const jd=genJade(type);
+  jadeCanvas=renderJadeCanvas(jd,10);
+  // 布局
+  layout();
+  const seed=Math.random()*100;
+  const cx=box.x+box.w/2, cy=box.y+box.h/2, R=box.w*0.46;
+  outline=makeOutline(cx,cy,R,seed);
+  // 石皮层
+  skinCanvas=document.createElement('canvas');skinCanvas.width=box.w;skinCanvas.height=box.h;
+  skinCtx=skinCanvas.getContext('2d');
+  const skinTex=makeSkin(box.w,box.h,seed);
+  skinCtx.drawImage(skinTex,0,0);
+
+  const market=rand(0.85,1.3),crackF=rand(0.78,1.0);
+  let trueVal=0,jadeCnt=0,qsum=0,csum=0;
+  for(let i=0;i<GRID*GRID;i++){trueVal+=cellValue(jd,i);if(jd.jade[i]){jadeCnt++;qsum+=jd.q[i];csum+=COLORS[jd.col[i]].coef;}}
+  G.stone={type,jd,market,crackF,trueVal,jadeCnt,seed,
+    avgQ:jadeCnt?qsum/jadeCnt:0,avgColorCoef:jadeCnt?csum/jadeCnt:0.5,
+    revealed:new Uint8Array(GRID*GRID),scrapedCells:0,
+    crackPenalty:0,lastCrackHit:0,
+    purchase:type.price};
+}
+
+function layout(){
+  cv.width=innerWidth;cv.height=innerHeight;
+  const size=Math.min(innerWidth-380, innerHeight-200, 620);
+  const s=Math.max(360,size);
+  box.w=s;box.h=s;
+  box.x=Math.floor((innerWidth-380-s)/2)+ (innerWidth>900?40:20);
+  box.y=Math.floor((innerHeight-s)/2)+20;
+}
+
+/* 坐标：canvas -> 格子 */
+function cellAt(mx,my){const gx=Math.floor((mx-box.x)/box.w*GRID),gy=Math.floor((my-box.y)/box.h*GRID);return {gx,gy};}
+function cellCenter(gx,gy){return [box.x+(gx+0.5)/GRID*box.w, box.y+(gy+0.5)/GRID*box.h];}
+
+/* 刮开 */
+let scraping=false,lastX=0,lastY=0;
+function scrapeAt(mx,my){
+  if(!pip(mx,my,outline))return;
+  const b=G.brush;
+  // 擦石皮
+  skinCtx.save();skinCtx.globalCompositeOperation='destination-out';
+  skinCtx.beginPath();skinCtx.arc(mx-box.x,my-box.y,b,0,7);skinCtx.fill();skinCtx.restore();
+  // 标记格
+  const cpx=box.w/GRID;const rad=Math.ceil(b/cpx)+1;
+  const {gx,gy}=cellAt(mx,my);let newCells=0,newCracks=0;
+  for(let dy=-rad;dy<=rad;dy++)for(let dx=-rad;dx<=rad;dx++){
+    const x=gx+dx,y=gy+dy;if(x<0||x>=GRID||y<0||y>=GRID)continue;
+    const [ccx,ccy]=cellCenter(x,y);
+    if((ccx-mx)**2+(ccy-my)**2<=b*b && pip(ccx,ccy,outline)){
+      const idx=y*GRID+x;if(!G.stone.revealed[idx]){G.stone.revealed[idx]=1;newCells++;if(G.stone.jd.crack[idx])newCracks++;}
+    }
+  }
+  if(newCells){G.stone.scrapedCells+=newCells;updatePrices();}
+  if(newCracks){
+    const now=performance.now();
+    if(now-G.stone.lastCrackHit>=CRACK_COOLDOWN){
+      G.stone.lastCrackHit=now;
+      G.stone.crackPenalty+=CRACK_PENALTY;          // 累计裂缝罚金
+      G.coin=Math.max(0,G.coin-CRACK_PENALTY);      // 实际亏钱
+      $('#assetVal').textContent=fmt(G.coin);
+      updatePrices();
+      showCrackFx(CRACK_PENALTY);                    // 纯利润处飘“↓1000”
+    }
+  }
+}
+function scrapeLine(x0,y0,x1,y1){
+  const d=Math.hypot(x1-x0,y1-y0),step=Math.max(4,G.brush*0.4);
+  const n=Math.max(1,Math.floor(d/step));
+  for(let i=0;i<=n;i++){scrapeAt(lerp(x0,x1,i/n),lerp(y0,y1,i/n));}
+}
+
+/* ======================================================================
+   实时价格
+   ====================================================================== */
+function totalStoneCells(){
+  // 轮廓内格子数（估算一次并缓存）
+  if(G.stone._totCells)return G.stone._totCells;
+  let n=0;for(let y=0;y<GRID;y++)for(let x=0;x<GRID;x++){const [cx,cy]=cellCenter(x,y);if(pip(cx,cy,outline))n++;}
+  G.stone._totCells=n;return n;
+}
+function revealRatio(){return G.stone.scrapedCells/Math.max(1,totalStoneCells());}
+const DIRECT_FACTOR=0.62;   // 整料直接售卖折价（取料加工能卖更高）
+function currentPrices(){
+  const s=G.stone;let val=0;
+  for(let i=0;i<GRID*GRID;i++)if(s.revealed[i]&&s.jd.jade[i])val+=cellValue(s.jd,i)*VALUE_SCALE;
+  const scrapeCost=Math.round(s.scrapedCells*SCRAPE_PER);
+  const crackPen=s.crackPenalty||0;                          // 刮到裂缝累计赔钱
+  const directSell=Math.round(val*s.market*DIRECT_FACTOR);   // 整料直接售卖价
+  const profit=directSell - s.purchase - scrapeCost - crackPen; // 直接卖的纯利润(含裂缝赔钱)
+  const craftEst=Math.round(val*s.market*0.4);               // 打成品预估价(校准至真实产出：受形状/翡翠率/不可重叠限制约为理论值的40%)
+  return {directSell,profit,scrapeCost,crackPen,craftEst};
+}
+function updatePrices(){
+  const s=G.stone;
+  if(!s){  // 结束刮石回到市场：左侧价目牌全部归零
+    $('#sgCost').textContent='0';$('#sgCost').className='val cost';
+    $('#sgNow').textContent='0';$('#sgNow').className='val';
+    $('#sgScrape').textContent='0';$('#sgScrape').className='val spend';
+    $('#sgProfit').textContent='0';$('#sgProfit').className='val';
+    $('#sgCraft').textContent='0';$('#sgCraft').className='val';
+    return;
+  }
+  $('#sgCost').textContent=fmt(s.purchase);
+  if(revealRatio()<0.01){
+    $('#sgNow').textContent='???';$('#sgNow').className='val';
+    $('#sgScrape').textContent='0';$('#sgScrape').className='val spend';
+    $('#sgProfit').textContent='—';$('#sgProfit').className='val';
+    $('#sgCraft').textContent='???';$('#sgCraft').className='val';
+  }else{
+    const p=currentPrices();
+    $('#sgNow').textContent=fmt(p.directSell);$('#sgNow').className='val '+(p.directSell>=0?'pos':'neg');
+    $('#sgScrape').textContent='-'+fmt(p.scrapeCost);$('#sgScrape').className='val spend';
+    $('#sgProfit').textContent=(p.profit>=0?'+':'')+fmt(p.profit);$('#sgProfit').className='val '+(p.profit>=0?'pos':'neg');
+    $('#sgCraft').textContent=fmt(p.craftEst);$('#sgCraft').className='val pos';
+  }
+}
+
+/* ======================================================================
+   取料（多成品）
+   ====================================================================== */
+function modelCells(m,cx,cy,scale){
+  scale=scale||1;const cells=[];
+  if(m.shape==='ellipse'){const rx=m.rx*scale,ry=m.ry*scale;for(let dy=-ry-1;dy<=ry+1;dy++)for(let dx=-rx-1;dx<=rx+1;dx++)if(dx*dx/(rx*rx)+dy*dy/(ry*ry)<=1)cells.push([Math.round(cx+dx),Math.round(cy+dy)]);}
+  else if(m.shape==='ring'){const r=m.r*scale,hole=m.hole*scale;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const d=Math.sqrt(dx*dx+dy*dy);if(d<=r&&d>=hole)cells.push([Math.round(cx+dx),Math.round(cy+dy)]);}}
+  else if(m.shape==='rect'){const w=Math.round(m.w*scale),h=Math.round(m.h*scale);for(let dy=-(h>>1);dy<=(h>>1);dy++)for(let dx=-(w>>1);dx<=(w>>1);dx++)cells.push([Math.round(cx+dx),Math.round(cy+dy)]);}
+  return cells;
+}
+/* 只统计“已刮开露出”的翡翠格（取料仍受遮挡限制） */
+function evalCells(cells){
+  const jd=G.stone.jd,rv=G.stone.revealed;let total=0,jade=0,crack=0,qs=0,cc={};
+  for(const [x,y] of cells){total++;if(x<0||x>=GRID||y<0||y>=GRID)continue;const idx=y*GRID+x;
+    if(rv[idx]&&jd.jade[idx]){jade++;qs+=jd.q[idx];if(jd.crack[idx])crack++;cc[jd.col[idx]]=(cc[jd.col[idx]]||0)+1;}}
+  const jadeRate=total?jade/total:0,crackRate=jade?crack/jade:0,avgQ=jade?qs/jade:0;
+  let mainC='none',mx=0;for(const k in cc)if(k!=='none'&&cc[k]>mx){mx=cc[k];mainC=k;}
+  return {jadeRate,crackRate,avgQ,mainC,seed:seedOf(avgQ)};
+}
+function priceOf(model,cells,scale){
+  scale=scale||1;const e=evalCells(cells),s=G.stone;
+  if(e.jadeRate<0.9)return {price:0,valid:false,e};  // 无翡翠部分超过10%即无效（爆红，不可放置）
+  const col=COLORS[e.mainC];
+  // 尺寸越大越值钱（∝面积），同时需要更大片好料
+  const sizeFactor=Math.pow(scale,1.9);
+  let p=model.base*sizeFactor*Math.pow(e.jadeRate,1.4)*(0.4+e.seed.coef*0.16)*(0.5+col.coef*0.12)*(1-e.crackRate*0.85)*s.market;
+  return {price:Math.round(Math.max(0,p)),valid:true,e};
+}
+const PLACE_GAP=1;     // 成品之间至少留 1 格间隙（防止描边视觉重叠）
+/* 与已放置成品是否重叠/贴太近（膨胀 PLACE_GAP 格后判定，任一格命中即算重叠） */
+function overlapPlaced(cells){
+  if(!cells.length)return false;
+  const occ=new Set();
+  G.placed.forEach(pl=>modelCells(pl.model,pl.x,pl.y,pl.scale).forEach(([x,y])=>{
+    for(let ddy=-PLACE_GAP;ddy<=PLACE_GAP;ddy++)for(let ddx=-PLACE_GAP;ddx<=PLACE_GAP;ddx++)occ.add((x+ddx)+','+(y+ddy));
+  }));
+  for(const [x,y] of cells)if(occ.has(x+','+y))return true;
+  return false;
+}
+/* 成品是否完全落在石头轮廓内（越界即不可放置） */
+function insideOutline(cells){
+  if(!cells.length)return false;
+  for(const [x,y] of cells){
+    if(x<0||x>=GRID||y<0||y>=GRID)return false;
+    const [cx,cy]=cellCenter(x,y);
+    if(!pip(cx,cy,outline))return false;
+  }
+  return true;
+}
+
+/* ======================================================================
+   绘制
+   ====================================================================== */
+function draw(){
+  requestAnimationFrame(draw);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if(!G.stone||G.phase===PHASE.SHOP){drawShopStone();return;}
+  // 落地阴影
+  ctx.save();ctx.fillStyle='rgba(0,0,0,.28)';ctx.filter='blur(10px)';
+  ctx.beginPath();ctx.ellipse(box.x+box.w/2,box.y+box.h*0.92,box.w*0.34,box.h*0.09,0,0,7);ctx.fill();ctx.restore();
+  // 石头（clip 轮廓）
+  ctx.save();tracePath(outline);ctx.clip();
+  ctx.drawImage(jadeCanvas,box.x,box.y,box.w,box.h);
+  ctx.drawImage(skinCanvas,box.x,box.y);  // 刮石与取料阶段都保持未刮开处遮挡
+  ctx.restore();
+  // 轮廓描边（半写实）
+  ctx.save();tracePath(outline);
+  ctx.lineJoin='round';ctx.strokeStyle='rgba(40,26,14,.85)';ctx.lineWidth=7;ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+  // 取料阶段：成品
+  if(G.phase===PHASE.CRAFT){
+    G.placed.forEach(pl=>drawModel(pl.model,pl.x,pl.y,'placed',pl.e,pl.scale));
+    if(G.craftModel){const m=MODELS[G.craftModel];const cs=modelCells(m,G.cursor.x,G.cursor.y,G.craftScale);const pr=priceOf(m,cs,G.craftScale);
+      const canPut=pr.valid&&insideOutline(cs)&&!overlapPlaced(cs);
+      drawModel(m,G.cursor.x,G.cursor.y,canPut?'ok':'bad',pr.e,G.craftScale);}
+  }
+  // 刷子光标
+  if(G.phase===PHASE.SCRAPE&&curMouse.in){
+    ctx.beginPath();ctx.arc(curMouse.x,curMouse.y,G.brush,0,7);
+    ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=1;ctx.stroke();
+  }
+}
+function tracePath(pts){ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();}
+
+/* 精致成品渲染：真实玉器形状 + 玉质渐变 + 高光 */
+function jadeGrad(cx,cy,r,rgb,mode){
+  const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.35,r*0.1,cx,cy,r*1.1);
+  const [R,G2,B]=rgb;
+  const a=mode==='placed'?0.96:0.55;
+  g.addColorStop(0,`rgba(${Math.min(255,R+70)},${Math.min(255,G2+70)},${Math.min(255,B+60)},${a})`);
+  g.addColorStop(0.55,`rgba(${R},${G2},${B},${a})`);
+  g.addColorStop(1,`rgba(${R*0.6|0},${G2*0.6|0},${B*0.6|0},${a})`);
+  return g;
+}
+function drawModel(m,cx,cy,mode,e,scale){
+  scale=scale||1;const cpx=(box.w/GRID)*scale;
+  const CX=box.x+(cx+0.5)*(box.w/GRID), CY=box.y+(cy+0.5)*(box.w/GRID);
+  const rgb=(e&&e.mainC&&e.mainC!=='none')?COLORS[e.mainC].rgb:[110,200,140];
+  const strokeCol = mode==='bad'?'rgba(224,70,50,.95)':mode==='ok'?'rgba(255,200,60,.95)':'rgba(30,90,50,.9)';
+  ctx.save();
+  if(mode==='placed'){ctx.shadowColor='rgba(0,0,0,.35)';ctx.shadowBlur=8;ctx.shadowOffsetY=3;}
+  ctx.lineJoin='round';ctx.lineWidth=Math.max(2,cpx*0.5);
+
+  if(m.shape==='ellipse'){
+    const rx=m.rx*cpx, ry=m.ry*cpx;
+    ctx.beginPath();ctx.ellipse(CX,CY,rx,ry,0,0,7);
+    ctx.fillStyle=jadeGrad(CX,CY,Math.max(rx,ry),rgb,mode);ctx.fill();
+    ctx.strokeStyle=strokeCol;ctx.stroke();
+    // 高光
+    ctx.shadowBlur=0;ctx.beginPath();ctx.ellipse(CX-rx*0.3,CY-ry*0.35,rx*0.32,ry*0.22,-0.5,0,7);
+    ctx.fillStyle='rgba(255,255,255,.55)';ctx.fill();
+  }else if(m.shape==='ring'){
+    const R=m.r*cpx, hole=m.hole*cpx;
+    ctx.beginPath();ctx.arc(CX,CY,R,0,7);ctx.arc(CX,CY,hole,0,7,true);
+    ctx.fillStyle=jadeGrad(CX,CY,R,rgb,mode);ctx.fill('evenodd');
+    ctx.strokeStyle=strokeCol;
+    ctx.beginPath();ctx.arc(CX,CY,R,0,7);ctx.stroke();
+    ctx.beginPath();ctx.arc(CX,CY,hole,0,7);ctx.stroke();
+    // 环上高光弧
+    ctx.shadowBlur=0;ctx.beginPath();ctx.arc(CX,CY,(R+hole)/2,-2.4,-1.0);
+    ctx.strokeStyle='rgba(255,255,255,.5)';ctx.lineWidth=Math.max(1.5,(R-hole)*0.28);ctx.stroke();
+  }else if(m.shape==='rect'){
+    const w=m.w*cpx, h=m.h*cpx, rr=Math.min(w,h)*0.18;
+    const x0=CX-w/2,y0=CY-h/2;
+    ctx.beginPath();
+    ctx.moveTo(x0+rr,y0);ctx.arcTo(x0+w,y0,x0+w,y0+h,rr);ctx.arcTo(x0+w,y0+h,x0,y0+h,rr);
+    ctx.arcTo(x0,y0+h,x0,y0,rr);ctx.arcTo(x0,y0,x0+w,y0,rr);ctx.closePath();
+    ctx.fillStyle=jadeGrad(CX,CY,Math.max(w,h)*0.6,rgb,mode);ctx.fill();
+    ctx.strokeStyle=strokeCol;ctx.stroke();
+    ctx.shadowBlur=0;ctx.beginPath();ctx.ellipse(CX-w*0.22,CY-h*0.28,w*0.22,h*0.14,-0.4,0,7);
+    ctx.fillStyle='rgba(255,255,255,.4)';ctx.fill();
+  }
+  ctx.restore();
+}
+/* 商店展示一块朴素石头（缓存，避免每帧重算导致抖动） */
+let shopSeed=Math.random()*100;
+let shopSkin=null,shopOutline=null;
+function buildShop(){
+  layout();
+  const cx=box.x+box.w/2,cy=box.y+box.h/2,R=box.w*0.42;
+  shopOutline=makeOutline(cx,cy,R,shopSeed);
+  shopSkin=makeSkin(box.w,box.h,shopSeed);
+}
+function drawShopStone(){
+  if(!shopOutline||!shopSkin)buildShop();
+  const cx=box.x+box.w/2,cy=box.y+box.h/2,R=box.w*0.42;
+  ctx.save();ctx.fillStyle='rgba(0,0,0,.28)';ctx.filter='blur(10px)';
+  ctx.beginPath();ctx.ellipse(cx,cy+R*0.95,R*0.7,R*0.18,0,0,7);ctx.fill();ctx.restore();
+  ctx.save();tracePath(shopOutline);ctx.clip();ctx.drawImage(shopSkin,box.x,box.y);ctx.restore();
+  ctx.save();tracePath(shopOutline);ctx.lineJoin='round';ctx.strokeStyle='rgba(40,26,14,.85)';ctx.lineWidth=7;ctx.stroke();
+  ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+  ctx.fillStyle='rgba(74,47,20,.6)';ctx.font='16px sans-serif';ctx.textAlign='center';
+  ctx.fillText('在右侧选购一块原石 →',cx,cy);
+}
+
+/* ======================================================================
+   交互
+   ====================================================================== */
+const curMouse={x:0,y:0,in:false};
+cv.addEventListener('pointerdown',e=>{
+  const mx=e.clientX,my=e.clientY;
+  if(G.phase===PHASE.SCRAPE){scraping=true;lastX=mx;lastY=my;scrapeAt(mx,my);}
+  else if(G.phase===PHASE.CRAFT){onCraftClick(mx,my);}
+});
+cv.addEventListener('pointermove',e=>{
+  const mx=e.clientX,my=e.clientY;curMouse.x=mx;curMouse.y=my;
+  if(G.phase===PHASE.SCRAPE){curMouse.in=pip(mx,my,outline);
+    if(scraping){scrapeLine(lastX,lastY,mx,my);lastX=mx;lastY=my;}}
+  else if(G.phase===PHASE.CRAFT&&G.craftModel){const {gx,gy}=cellAt(mx,my);G.cursor.x=clamp(gx,0,GRID-1);G.cursor.y=clamp(gy,0,GRID-1);}
+});
+window.addEventListener('pointerup',()=>{scraping=false;});
+cv.addEventListener('pointerleave',()=>{curMouse.in=false;scraping=false;});
+cv.addEventListener('wheel',e=>{
+  if(G.phase===PHASE.CRAFT&&G.craftModel){e.preventDefault();
+    G.craftScale=clamp(G.craftScale + (e.deltaY<0?0.1:-0.1),0.5,1.8);
+    syncScaleUI();}
+},{passive:false});
+function syncScaleUI(){const r=$('#scaleRange');if(r){r.value=Math.round(G.craftScale*100);}const l=$('#scaleLbl');if(l)l.textContent=Math.round(G.craftScale*100)+'%';}
+
+function onCraftClick(mx,my){
+  const {gx,gy}=cellAt(mx,my);
+  if(!G.craftModel){ // 点已放置删除
+    for(let i=G.placed.length-1;i>=0;i--){const pl=G.placed[i];if(modelCells(pl.model,pl.x,pl.y).some(([x,y])=>x===gx&&y===gy)){G.placed.splice(i,1);renderPanel();return;}}
+    return;
+  }
+  const m=MODELS[G.craftModel];const sc=G.craftScale;const cells=modelCells(m,gx,gy,sc);const pr=priceOf(m,cells,sc);
+  if(!pr.valid){return;}
+  if(!insideOutline(cells)){toast('成品超出石料范围，请往料面内侧放','bad');return;}
+  if(overlapPlaced(cells)){toast('成品不可重叠，请放到空白料面','bad');return;}
+  G.placed.push({key:G.craftModel,model:m,x:gx,y:gy,scale:sc,price:pr.price,e:pr.e});
+  toast(`放置 ${m.name} · 估价 ${fmt(pr.price)}`);G.craftModel=null;renderPanel();
+}
+
+/* ======================================================================
+   阶段 / UI
+   ====================================================================== */
+function setPhase(p){
+  G.phase=p;
+  $('#hint').textContent=p===PHASE.SHOP?'在右侧「原石市场」选购一块原石开始':
+    p===PHASE.SCRAPE?'按住鼠标在石头上刮开石皮 · 调下方刷子大小 · 刮开越多估价越准':
+    '选成品→在料面移动到好料区→点击放置（不可叠放）· 点已放成品可移除';
+  renderDock();renderPanel();updatePrices();
+}
+function renderDock(){
+  const d=$('#dock');
+  if(G.phase===PHASE.SCRAPE){
+    d.innerHTML=`
+      <div class="brushbar">
+        <div class="rb" id="bMinus">−</div>
+        <input type="range" id="brushRange" min="10" max="46" value="${G.brush}">
+        <div class="rb" id="bPlus">＋</div>
+        <div class="lbl">🖌️ 刷子<br>${G.brush}</div>
+      </div>
+      <button class="wood" id="sellDirectBtn">💰 直接卖整料<span class="c">按现价出手</span></button>
+      <button class="gold" id="toCraft">💎 取料加工<span class="c">打成品卖更高</span></button>
+      <button class="red" id="dropBtn">🗑️ 弃石换新</button>`;
+    const rg=$('#brushRange');
+    rg.oninput=()=>{G.brush=+rg.value;$('#dock .lbl').innerHTML='🖌️ 刷子<br>'+G.brush;};
+    $('#bMinus').onclick=()=>{G.brush=clamp(G.brush-4,10,46);rg.value=G.brush;$('#dock .lbl').innerHTML='🖌️ 刷子<br>'+G.brush;};
+    $('#bPlus').onclick=()=>{G.brush=clamp(G.brush+4,10,46);rg.value=G.brush;$('#dock .lbl').innerHTML='🖌️ 刷子<br>'+G.brush;};
+    $('#sellDirectBtn').onclick=sellDirect;
+    $('#toCraft').onclick=toCraft;
+    $('#dropBtn').onclick=discardStone;
+  }else if(G.phase===PHASE.CRAFT){
+    d.innerHTML=`<button class="wood" id="backScrape">⬅️ 继续刮石</button>`;
+    $('#backScrape').onclick=()=>{setPhase(PHASE.SCRAPE);};
+  }else d.innerHTML='';
+}
+function openPanel(){$('#panel').classList.add('open');}
+function closePanel(){$('#panel').classList.remove('open');}
+$('#panelClose').onclick=closePanel;
+
+function renderPanel(){
+  const title=$('#panelTitle'),body=$('#panelBody'),foot=$('#panelFoot');
+  if(G.phase===PHASE.SHOP){
+    title.textContent='🪨 原石市场';
+    body.innerHTML=STONES.map((s,i)=>`<div class="stone-card" data-i="${i}"><div class="tag ${s.tag}">${s.tn}</div><div class="t">${s.t}</div><div class="s">${s.s}</div><div class="p">💰 ${fmt(s.price)}</div><div class="d">${s.d}</div></div>`).join('');
+    body.querySelectorAll('.stone-card').forEach(el=>el.onclick=()=>buyStone(+el.dataset.i));
+    foot.innerHTML=`<div style="font-size:12px;color:#a07840;text-align:center">${G.inventory.length?'已售成品 '+G.inventory.length+' 件':'选一块料，赌一把身家！'}</div>`;
+    openPanel();
+  }else if(G.phase===PHASE.CRAFT){
+    title.textContent='💎 取料 · 放置成品';
+    const s=G.stone;const total=G.placed.reduce((a,p)=>a+p.price,0);
+    const cp=currentPrices();
+    body.innerHTML=`
+      <div class="infocard"><div class="it">料面信息</div>
+        <div class="info-row"><span>整体种水</span><span class="v">${seedOf(s.avgQ).name}</span></div>
+        <div class="info-row"><span>综合色系数</span><span class="v">×${s.avgColorCoef.toFixed(1)}</span></div>
+        <div class="info-row"><span>裂纹影响</span><span class="v" style="color:${s.crackF<0.85?'var(--red)':'#166b1e'}">${((1-s.crackF)*100).toFixed(0)}%</span></div>
+        <div class="info-row"><span>已投入(购+刮)</span><span class="v">${fmt(s.purchase+cp.scrapeCost)}</span></div>
+      </div>
+      <div style="font-size:12px;color:#a07840;margin-bottom:10px">选成品→料面移动到好料区→点击放置（不可叠放）：</div>
+      ${Object.keys(MODELS).map(k=>`<div class="prod ${G.craftModel===k?'sel':''}" data-k="${k}"><div class="ic">${MODELS[k].icon}</div><div><div class="mn">${MODELS[k].name}</div><div class="mh">${MODELS[k].hint}</div></div></div>`).join('')}
+      <div class="infocard"><div class="it">📐 成品大小</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="rb" id="sMinus" style="width:30px;height:30px;font-size:20px">−</div>
+          <input type="range" id="scaleRange" min="50" max="180" value="${Math.round(G.craftScale*100)}" style="flex:1;-webkit-appearance:none;height:10px;border-radius:6px;background:linear-gradient(90deg,#c8a86a,#e0a020);outline:none">
+          <div class="rb" id="sPlus" style="width:30px;height:30px;font-size:20px">＋</div>
+          <div id="scaleLbl" style="min-width:46px;text-align:center;font-weight:900;color:#166b1e">${Math.round(G.craftScale*100)}%</div>
+        </div>
+      </div>
+      ${G.placed.length?'<div style="font-size:12px;color:#a07840;margin:12px 0 8px">已放置（点✕或料面成品移除）：</div>':''}
+      ${G.placed.map((p,i)=>`<div class="placed-item"><span>${p.model.name} · ${seedOf(p.e.avgQ).name}</span><span><span class="pv">💰 ${fmt(p.price)}</span> <span class="del" data-i="${i}">✕</span></span></div>`).join('')}
+    `;
+    body.querySelectorAll('.prod').forEach(el=>el.onclick=()=>{G.craftModel=(G.craftModel===el.dataset.k)?null:el.dataset.k;renderPanel();});
+    body.querySelectorAll('.del').forEach(el=>el.onclick=ev=>{ev.stopPropagation();G.placed.splice(+el.dataset.i,1);renderPanel();});
+    const rg=$('#scaleRange');
+    if(rg)rg.oninput=()=>{G.craftScale=+rg.value/100;$('#scaleLbl').textContent=rg.value+'%';};
+    if($('#sMinus'))$('#sMinus').onclick=()=>{G.craftScale=clamp(G.craftScale-0.1,0.5,1.8);syncScaleUI();};
+    if($('#sPlus'))$('#sPlus').onclick=()=>{G.craftScale=clamp(G.craftScale+0.1,0.5,1.8);syncScaleUI();};
+    foot.innerHTML=`<div class="total"><span class="tl">成品合计（${G.placed.length}件）</span><span class="tv">💰 ${fmt(total)}</span></div>
+      <button class="gold" style="width:100%" id="sellBtn" ${G.placed.length?'':'disabled'}>✨ 全部制作并出售</button>
+      <button class="wood" style="width:100%;margin-top:8px" id="sellDirectBtn2">💰 不加工 · 直接卖整料（${fmt(currentPrices().directSell)}）</button>`;
+    $('#sellBtn').onclick=sellPlaced;
+    $('#sellDirectBtn2').onclick=sellDirect;
+    openPanel();
+  }else{closePanel();}
+}
+
+/* ---------- 动作 ---------- */
+function buyStone(i){
+  const t=STONES[i];if(G.coin<t.price){toast('资产不足，买不起这块料','bad');return;}
+  G.coin-=t.price;G.placed=[];G.craftModel=null;
+  buildStone(t);
+  toast(`购入「${t.t}」，开始刮石！`);closePanel();setPhase(PHASE.SCRAPE);
+}
+function toCraft(){
+  if(revealRatio()<0.25){toast('至少刮开约25%才好取料哦','bad');return;}
+  // 保持已刮开状态（未刮开处仍遮挡），成品只能放在露出的翡翠上
+  setPhase(PHASE.CRAFT);
+}
+function sellDirect(){
+  if(revealRatio()<0.01){toast('先刮开看看料，再决定卖不卖','bad');return;}
+  const cp=currentPrices();const price=Math.max(0,cp.directSell);
+  const invested=G.stone.purchase+cp.scrapeCost;const net=price-invested;
+  G.coin+=price;G.inventory.unshift({name:'整料直售',price});
+  showModal('💰 整料出手',`整块料按现价直接售出<div class="big">💰 +${fmt(price)}</div>累计投入 ${fmt(invested)}（购入${fmt(G.stone.purchase)}+刮石${fmt(cp.scrapeCost)}）· <b style="color:${net>=0?'#166b1e':'var(--red)'}">${net>=0?'净赚 '+fmt(net):'亏损 '+fmt(-net)}</b>`,
+    [{t:'收摊回市场',c:'gold',f:()=>{closeModal();backToShop();}}]);
+}
+function sellPlaced(){
+  const total=G.placed.reduce((a,p)=>a+p.price,0);
+  if(!total){toast('还没有放置成品','bad');return;}
+  const cp=currentPrices();const invested=G.stone.purchase+cp.scrapeCost;
+  G.coin+=total;const names=G.placed.map(p=>p.model.name).join('、');
+  G.placed.forEach(p=>G.inventory.unshift({name:p.model.name,price:p.price}));
+  const net=total-invested;
+  showModal('✨ 成品出炉！',`制成 <b style="color:#166b1e">${names}</b><div class="big">💰 +${fmt(total)}</div>累计投入 ${fmt(invested)}（购入${fmt(G.stone.purchase)}+刮石${fmt(cp.scrapeCost)}）· <b style="color:${net>=0?'#166b1e':'var(--red)'}">${net>=0?'净赚 '+fmt(net):'亏损 '+fmt(-net)}</b>`,
+    [{t:'收摊回市场',c:'gold',f:()=>{closeModal();backToShop();}}]);
+}
+function discardStone(){
+  const cp=currentPrices();const lost=G.stone.purchase+cp.scrapeCost;
+  showModal('确认弃石？',`这块料已投入 <b style="color:#c0331a">💰 ${fmt(lost)}</b>，弃石将全部损失。`,
+    [{t:'再想想',c:'wood',f:closeModal},{t:'狠心弃石',c:'red',f:()=>{closeModal();toast(`弃石，损失 ${fmt(lost)}`,'bad');backToShop();}}]);
+}
+function backToShop(){G.stone=null;G.placed=[];G.craftModel=null;shopSeed=Math.random()*100;shopSkin=null;shopOutline=null;setPhase(PHASE.SHOP);checkBankrupt();}
+function checkBankrupt(){const min=Math.min(...STONES.map(s=>s.price));if(G.coin<min)showModal('💸 资金见底',`资产仅剩 <b style="color:#c0331a">💰 ${fmt(G.coin)}</b>，已买不起任何原石。<br>赌石一途，量力而行。`,[{t:'东山再起（重开）',c:'gold',f:()=>location.reload()}]);}
+
+/* ---------- modal ---------- */
+function showModal(title,html,btns){$('#modal').innerHTML=`<h2>${title}</h2><p>${html}</p><div class="btns">${btns.map((b,i)=>`<button class="${b.c}" data-i="${i}">${b.t}</button>`).join('')}</div>`;$('#modal').querySelectorAll('button').forEach((el,i)=>el.onclick=btns[i].f);$('#mask').classList.add('show');}
+function closeModal(){$('#mask').classList.remove('show');}
+
+addEventListener('resize',()=>{cv.width=innerWidth;cv.height=innerHeight;if(G.phase===PHASE.SHOP){shopSkin=null;shopOutline=null;}});
+
+/* ---------- 启动 ---------- */
+function boot(){
+  $('#assetVal').textContent=fmt(G.coin);
+  layout();setPhase(PHASE.SHOP);draw();
+  setInterval(()=>{$('#assetVal').textContent=fmt(G.coin);},300);
+  showModal('🀩 欢迎来到「玉石刮一刮」',
+    `你带着 <b style="color:#c0651a">💰 20,000</b> 本金入行。<br><br><b>买原石 → 用刷子一点点刮开石皮 → 露好料才回本 → 取料摆放多个成品出售</b>。<br><br>刮开消耗成本，一刀穷一刀富！`+
+    `<div class="legend"><span><i style="background:#0a9646"></i>帝王绿</span><span><i style="background:#3cc85a"></i>阳绿</span><span><i style="background:#74d06e"></i>苹果绿</span><span><i style="background:#ba8fd8"></i>紫罗兰</span><span><i style="background:#86c8b6"></i>飘花</span></div>`,
+    [{t:'开始赌石！',c:'gold',f:closeModal}]);
+}
+boot();
+</script>
+</body>
+</html>

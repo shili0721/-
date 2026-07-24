@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>王昭幻 · 简历</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#e6edf3;
+    --muted:#8b949e; --accent:#58a6ff; --accent2:#a371f7;
+    --tag:#1f6feb22; --tag-text:#79c0ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1000px 500px at 50% -10%,#1b2233 0%,var(--bg) 55%);
+    color:var(--text);min-height:100vh;line-height:1.7;padding:32px 16px 72px;
+  }
+  .wrap{max-width:860px;margin:0 auto}
+  .back{display:inline-flex;align-items:center;gap:6px;color:var(--accent);text-decoration:none;font-size:14px;margin-bottom:20px}
+  .back:hover{gap:10px}
+  /* 头部 */
+  .head{
+    background:linear-gradient(120deg,#1f6feb22,#a371f722);
+    border:1px solid var(--border);border-radius:18px;padding:30px 32px;
+    display:flex;gap:24px;align-items:center;flex-wrap:wrap;
+  }
+  .head .name{font-size:32px;font-weight:800;letter-spacing:1px}
+  .head .role{color:var(--accent);font-size:15px;margin-top:4px;font-weight:600}
+  .head .info{flex:1;min-width:240px}
+  .contact{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+  .contact span{font-size:13px;color:var(--muted);background:#0d111788;border:1px solid var(--border);padding:5px 12px;border-radius:20px}
+  .tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+  .tags .t{font-size:12px;color:var(--tag-text);background:var(--tag);padding:4px 12px;border-radius:20px}
+  /* 区块 */
+  section{
+    margin-top:24px;background:var(--card);border:1px solid var(--border);
+    border-radius:16px;padding:24px 28px;
+  }
+  h2{
+    font-size:18px;font-weight:700;margin-bottom:16px;padding-left:12px;
+    border-left:4px solid var(--accent);display:flex;align-items:center;gap:8px;
+  }
+  .item{margin-bottom:20px}
+  .item:last-child{margin-bottom:0}
+  .item .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline}
+  .item .title{font-size:16px;font-weight:700}
+  .item .org{color:var(--accent2);font-weight:600;margin-left:8px;font-size:15px}
+  .item .date{color:var(--muted);font-size:13px;white-space:nowrap}
+  .item ul{margin-top:8px;padding-left:20px}
+  .item li{font-size:14px;color:#c9d1d9;margin-bottom:6px}
+  .item li b{color:var(--text)}
+  .note{font-size:13px;color:var(--muted);margin-top:6px;font-style:italic}
+  .skills{display:grid;gap:12px}
+  .skill-row{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
+  .skill-row .k{color:var(--muted);font-size:14px;min-width:72px;font-weight:600}
+  .skill-row .v{font-size:14px;color:#c9d1d9}
+  footer{text-align:center;margin-top:36px;color:var(--muted);font-size:13px}
+  @media(max-width:520px){.head{padding:22px}.name{font-size:26px}section{padding:20px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="./">← 返回作品集</a>
+
+  <div class="head">
+    <div class="info">
+      <div class="name">王昭幻</div>
+      <div class="role">一周实习 5 天 · 一周内到岗 · 可实习 6 个月</div>
+      <div class="contact">
+        <span>📱 189-0363-3143</span>
+        <span>💬 微信 woaishangxue8</span>
+        <span>✉ wangzhaohuan0626@outlook.com</span>
+      </div>
+      <div class="tags">
+        <span class="t">Agile</span>
+        <span class="t">玩法设计</span>
+        <span class="t">数据复盘</span>
+        <span class="t">跨部门协作</span>
+        <span class="t">抗压能力强</span>
+        <span class="t">情绪稳定</span>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>🎓 教育背景</h2>
+    <div class="item">
+      <div class="row">
+        <div><span class="title">华南农业大学</span></div>
+        <div class="date">2024.9 - 2028.9 · <span style="color:var(--accent2);font-weight:600">本科</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>💼 实习经历</h2>
+
+    <div class="item">
+      <div class="row">
+        <div><span class="title">游戏策划实习生（关卡策划 → AI 游戏策划）</span><span class="org">腾讯</span></div>
+        <div class="date">2026.02 - 2026.07</div>
+      </div>
+      <ul>
+        <li>主导 <b>3 款小游戏</b>关卡设计，输出 <b>10+ 份 GDD</b>，试玩通过率 <b>80%</b>，优化引导后 <b>7 日留存 +10%</b>。</li>
+        <li>孵化「画图占卜」玩法，微调 CV 模型（<b>800+ 简笔画</b>，准确率 <b>92%</b>），控制文本偏差 <b>&lt;±5%</b>。</li>
+        <li>首创「打螺丝」UGC 编辑器，植入数学方程解决 AI 生成拓扑问题，设「半自动布钉」机制，原型效率 <b>+80%</b>。</li>
+        <li>基于 <b>Code Buddy</b> 开发 3 款 AI 配置器，沉淀可复用策划工作流。</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="row">
+        <div><span class="title">店铺运营实习生</span><span class="org">百度</span></div>
+        <div class="date">2025.09 - 2026.01</div>
+      </div>
+      <ul>
+        <li><b>店铺基建与视觉输出：</b>从 0 到 1 搭建店铺体系，单日高效完成 8 家店铺装修；利用 <b>AI + PS</b> 制作高转化素材，单日完成 5 家店铺详情页，具备高质量内容产出与设计协作能力。</li>
+        <li><b>数据化营销与增长：</b>深度分析广告投流数据，针对性提出优化方案，助力客户月销突破 <b>3 万+</b>；通过全流程需求对接与服务优化，助力客户店铺规模从 2 家扩展至 10 家。</li>
+        <li><b>流量与转化优化：</b>持续优化详情页逻辑与广告投放策略，有效提升店铺 UV 价值与整体转化率。</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="row">
+        <div><span class="title">跨境电商实习生</span><span class="org">钛动科技</span></div>
+        <div class="date">2025.05 - 2025.08</div>
+      </div>
+      <ul>
+        <li><b>GMV 爆发式增长：</b>负责 TikTok 店铺日常运营，策划短视频内容与优惠策略，推动日 GMV 从 5000 PHP 提升至 <b>8.6W PHP（增长 17.2 倍）</b>。</li>
+        <li><b>数据复盘与策略迭代：</b>独立完成数据清洗与可视化复盘，输出运营优化方案，店铺 UV 价值提升 <b>22%</b>。</li>
+        <li><b>KOL 营销与转化优化：</b>对接 KOL 产出素材 186 条，通过优化落地页转化逻辑，带货转化率提升 <b>1.8%</b>；完成 12 款竞品深度分析，为营销决策提供数据支撑。</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="row">
+        <div><span class="title">营销助理</span><span class="org">SCAU 留学保护区</span></div>
+        <div class="date">2025.02 - 2025.04</div>
+      </div>
+      <ul>
+        <li><b>校园推广与 ROI 管控：</b>协助制定并执行校园推广投放流程，精准触达学生群体触点，保障推广 <b>ROI 达 1.6</b>。</li>
+        <li><b>用户调研与需求挖掘：</b>聚焦大学生群体偏好，通过问卷与深度访谈挖掘潜在需求，回收有效问卷 60 份，为产品迭代提供依据。</li>
+        <li><b>竞品分析与策略调整：</b>持续监控竞品营销动态，分析其获客思路与转化路径，动态调整投放计划，有效提升宣传转化率。</li>
+      </ul>
+      <div class="note">SCAU 留学保护区：学校创业平台内孵化的初创公司。</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>🚀 项目经历</h2>
+
+    <div class="item">
+      <div class="row">
+        <div><span class="title">营销负责人</span><span class="org">华南农业大学果茶项目</span></div>
+        <div class="date">2024.09 - 2024.11</div>
+      </div>
+      <ul>
+        <li>为果茶项目提供软文 / 详情页制作，24 小时内完成价格与受众问卷调研。</li>
+        <li>严控试用样本质量，回收样本 150 份，为产品定位、决策提供支撑。</li>
+        <li>用 Excel 透视表分析数据，产出「学生偏好果味」结论并优化果茶风味，2 周拉通「访客 - 转化 - 退款」数据。</li>
+      </ul>
+    </div>
+
+    <div class="item">
+      <div class="row">
+        <div><span class="title">总负责人</span><span class="org">0 到 1 搭建水晶饰品电商品牌</span></div>
+        <div class="date">2022.04 - 2023.06</div>
+      </div>
+      <ul>
+        <li>独立负责小红书 / 抖音脚本创作、视频剪辑、内容策划，精准引流私域。</li>
+        <li>全链路运营店铺：选品、上架、优化、复盘，实现月销 <b>2 万元</b>。</li>
+        <li>根据用户反馈设计新品与迭代方案，累计开发 <b>50+ 款</b>产品。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>🎮 游戏经历</h2>
+    <div class="item">
+      <ul>
+        <li><b>MOBA / 竞技：</b>《王者荣耀》（7 年，常年稳定王者 20 星，累计充值约 1k）· 《第五人格》（3 年，段位稳定求生者 5 阶）。</li>
+        <li><b>乙女 / 剧情向：</b>《光与夜之恋》（5 年，单人收集度 84%，累计充值约 8k）· 《恋与深空》。</li>
+        <li><b>模拟经营 / 沙盒建造：</b>《我的世界》（500+ 小时）· 《星露谷物语》（300+ 小时）· 《城市天际线》（300+ 小时）· 《胡闹厨房》（50+ 小时）· 《戴夫的潜水艇》（50+ 小时）。</li>
+        <li><b>派对 / 休闲：</b>《蛋仔派对》（约 1 年）。</li>
+        <li><b>广泛涉猎：</b>长期活跃于「异次元」（类 Steam 的游戏聚合平台，累计充值约 1k），持续体验各类独立与小众玩法，保持对新品类与创新机制的敏感度。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>🛠 个人能力</h2>
+    <div class="skills">
+      <div class="skill-row"><span class="k">内容 / 玩法策划</span><span class="v">脚本撰写 · 方案设计 · 竞品拆解 · 系统逻辑梳理 · 关卡节奏与数值配置</span></div>
+      <div class="skill-row"><span class="k">数据能力</span><span class="v">Excel（函数 / 透视表）· SQL：数据清洗 · 可视化复盘</span></div>
+      <div class="skill-row"><span class="k">产品工具</span><span class="v">Axure · <b>Code Buddy</b> · 墨刀 · UE5（详见作品集）· 3ds max（详见作品集）</span></div>
+      <div class="skill-row"><span class="k">设计 / 剪辑</span><span class="v">PS · 可画 · 剪映（单条抖音视频播放量 <b>50W+</b>）</span></div>
+      <div class="skill-row"><span class="k">办公软件</span><span class="v">Excel · SQL · PPT · Word</span></div>
+      <div class="skill-row"><span class="k">作品沉淀</span><span class="v">《切翡翠模拟器》《打螺丝编辑器》《星盘生成器》等（详见作品集）</span></div>
+      <div class="skill-row"><span class="k">综合能力</span><span class="v">跨部门协作 · 需求对接 · 项目 0→1 落地 · 抗压推进；擅长将 AI 大模型深度嵌入策划 / 开发工作流，聚焦核心玩法设计。</span></div>
+    </div>
+  </section>
+
+  <footer>王昭幻 · 求职简历 · 「我一直在努力」</footer>
+</div>
+</body>
+</html>

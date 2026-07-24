@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>作品集 · AI 方向</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --card-hover:#1c2331;
+    --border:#30363d; --text:#e6edf3; --muted:#8b949e;
+    --accent:#58a6ff; --accent2:#a371f7; --tag:#1f6feb22; --tag-text:#79c0ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#1b2233 0%,var(--bg) 60%);
+    color:var(--text);min-height:100vh;line-height:1.6;
+    padding:48px 20px 80px;
+  }
+  .wrap{max-width:1000px;margin:0 auto}
+  header{text-align:center;margin-bottom:12px}
+  h1{
+    font-size:40px;font-weight:800;letter-spacing:1px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{color:var(--muted);font-size:16px;margin-top:10px;max-width:640px;margin-left:auto;margin-right:auto}
+  .cards{
+    margin-top:48px;display:grid;gap:22px;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  }
+  .card{
+    display:flex;flex-direction:column;text-decoration:none;color:inherit;
+    background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:26px 24px;transition:.25s ease;position:relative;overflow:hidden;
+  }
+  .card:hover{transform:translateY(-6px);border-color:var(--accent);background:var(--card-hover);box-shadow:0 12px 30px #0008}
+  .card .top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .icon{font-size:30px;line-height:1}
+  .card h2{font-size:20px;font-weight:700}
+  .star{font-size:12px;color:#f0d060;background:#f0d0601a;padding:2px 8px;border-radius:20px;margin-left:auto}
+  .desc{color:var(--muted);font-size:14px;flex:1}
+  .tags{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .tag{font-size:12px;color:var(--tag-text);background:var(--tag);padding:4px 10px;border-radius:20px}
+  .go{margin-top:18px;color:var(--accent);font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .card:hover .go{gap:12px}
+  .resume{
+    margin-top:40px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+    background:linear-gradient(90deg,#1f6feb18,#a371f718);
+    border:1px solid var(--border);border-radius:16px;padding:24px 28px;
+  }
+  .resume .r-icon{font-size:34px}
+  .resume .r-text{flex:1;min-width:200px}
+  .resume h3{font-size:19px;font-weight:700;margin-bottom:4px}
+  .resume p{color:var(--muted);font-size:14px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;
+    font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;transition:.25s ease;
+  }
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px #58a6ff55}
+  footer{text-align:center;margin-top:56px;color:var(--muted);font-size:13px}
+  footer a{color:var(--accent);text-decoration:none}
+  /* AI 作品集分区标题 */
+  .section-title{
+    margin-top:40px;margin-bottom:2px;font-size:22px;font-weight:800;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    display:inline-block;
+  }
+  /* UE / 3ds 视频横条卡片 */
+  .video-bar{
+    margin-top:22px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+    background:linear-gradient(90deg,#1f6feb18,#a371f718);
+    border:1px solid var(--border);border-radius:16px;padding:22px 26px;
+    cursor:pointer;transition:.25s ease;
+  }
+  .video-bar:first-of-type{margin-top:36px}
+  .video-bar:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 10px 26px #0007}
+  .video-bar .v-icon{font-size:32px}
+  .video-bar .v-text{flex:1;min-width:200px}
+  .video-bar .v-text h3{font-size:19px;font-weight:700;margin-bottom:4px}
+  .video-bar .v-text p{color:var(--muted);font-size:14px}
+  .video-bar .v-btn{
+    display:inline-flex;align-items:center;gap:8px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;
+    font-weight:600;font-size:15px;padding:12px 24px;border-radius:10px;
+    white-space:nowrap;transition:.25s ease;
+  }
+  .video-bar:hover .v-btn{transform:translateY(-2px);box-shadow:0 8px 20px #58a6ff55}
+  /* 视频弹窗 */
+  .modal{
+    position:fixed;inset:0;background:#000c;backdrop-filter:blur(4px);
+    display:none;align-items:center;justify-content:center;z-index:100;padding:24px;
+  }
+  .modal.open{display:flex}
+  .modal-box{width:100%;max-width:900px;background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+  .modal-head{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+  .modal-head h3{font-size:17px;font-weight:700}
+  .modal-close{margin-left:auto;background:none;border:none;color:var(--muted);font-size:26px;cursor:pointer;line-height:1;padding:0 4px}
+  .modal-close:hover{color:var(--text)}
+  .modal-body{background:#000}
+  .modal-body video{width:100%;max-height:70vh;display:block}
+  .modal-empty{color:var(--muted);font-size:15px;text-align:center;padding:60px 20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>王昭幻的作品集</h1>
+    <p class="sub">覆盖 Prompt 工程、多模态 AI 应用、方案设计、vibe coding 与三维制作。点击即可在线体验或观看演示。</p>
+  </header>
+
+  <div class="video-bar" data-src="./UE5demo.mp4" data-title="UE 作品演示">
+    <span class="v-icon">🎬</span>
+    <div class="v-text">
+      <h3>UE 作品展示</h3>
+      <p>基于 Unreal Engine 5 制作的场景 / 玩法演示，展示三维场景搭建与实时渲染能力。</p>
+    </div>
+    <span class="v-btn">▶ 播放视频</span>
+  </div>
+
+  <div class="video-bar" data-src="./3dsdemo.mp4" data-title="3ds Max 作品演示">
+    <span class="v-icon">🧊</span>
+    <div class="v-text">
+      <h3>3ds Max 作品展示</h3>
+      <p>使用 3ds Max 完成的三维建模 / 渲染作品演示，展示模型制作与材质渲染能力。</p>
+    </div>
+    <span class="v-btn">▶ 播放视频</span>
+  </div>
+
+  <h2 class="section-title">AI 作品集</h2>
+
+  <div class="cards">
+    <a class="card" href="./screw/">
+      <div class="top">
+        <span class="icon">🔩</span>
+        <h2>打螺丝编辑器</h2>
+        <span class="star">主推</span>
+      </div>
+      <p class="desc">一套「发参照图 + 需求 → AI 按统一规范生成可导入体素模型」的提示词工程系统，配套自研 3D 体素编辑器与量化自检标准。</p>
+      <div class="tags"><span class="tag">Prompt 工程</span><span class="tag">量化评测</span><span class="tag">3D 编辑器</span></div>
+      <span class="go">在线体验 →</span>
+    </a>
+
+    <a class="card" href="./astro/">
+      <div class="top">
+        <span class="icon">🌌</span>
+        <h2>星盘生成器</h2>
+      </div>
+      <p class="desc">上传星盘截图，多模态 AI 识别出生信息，再用精确星历重算并输出专业占星报告。懂 AI 能力边界、做扬长避短的方案设计。</p>
+      <div class="tags"><span class="tag">多模态 AI</span><span class="tag">方案设计</span><span class="tag">Benchmark</span></div>
+      <span class="go">在线体验 →</span>
+    </a>
+
+    <a class="card" href="./jade/">
+      <div class="top">
+        <span class="icon">💎</span>
+        <h2>玉石刮一刮</h2>
+      </div>
+      <p class="desc">纯前端、零依赖、单文件的「赌石」模拟经营小游戏。程序化生成翡翠纹理，自洽的经济数值系统，用 AI 辅助独立开发。</p>
+      <div class="tags"><span class="tag">vibe coding</span><span class="tag">数值设计</span><span class="tag">AI + 游戏</span></div>
+      <span class="go">在线体验 →</span>
+    </a>
+  </div>
+
+  <div class="resume">
+    <span class="r-icon">📄</span>
+    <div class="r-text">
+      <h3>我的简历</h3>
+      <p>了解我的教育背景、实习与项目经历、技能栈，点击右侧查看网页版简历。</p>
+    </div>
+    <a class="btn" href="./resume.html">查看简历 →</a>
+  </div>
+
+  <footer>
+    一个重度使用并擅长驾驭 AI 工具的候选人 · 每个作品均可现场运行演示
+  </footer>
+</div>
+
+<div class="modal" id="videoModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitle">作品演示</h3>
+      <button class="modal-close" id="modalClose" aria-label="关闭">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    var modal=document.getElementById('videoModal');
+    var body=document.getElementById('modalBody');
+    var titleEl=document.getElementById('modalTitle');
+    function close(){
+      modal.classList.remove('open');
+      body.innerHTML='';
+    }
+    document.querySelectorAll('.video-bar').forEach(function(bar){
+      bar.addEventListener('click',function(){
+        var src=bar.getAttribute('data-src');
+        titleEl.textContent=bar.getAttribute('data-title')||'作品演示';
+        // 探测视频是否存在
+        var probe=document.createElement('video');
+        probe.src=src;probe.preload='metadata';
+        probe.onloadedmetadata=function(){
+          body.innerHTML='';
+          var v=document.createElement('video');
+          v.src=src;v.controls=true;v.autoplay=true;v.playsInline=true;
+          body.appendChild(v);
+        };
+        probe.onerror=function(){
+          body.innerHTML='<div class="modal-empty">该作品视频尚未上传<br>（把视频命名为 '+src.replace('./','')+' 放到 portfolio 目录即可）</div>';
+        };
+        body.innerHTML='<div class="modal-empty">加载中…</div>';
+        modal.classList.add('open');
+      });
+    });
+    document.getElementById('modalClose').addEventListener('click',close);
+    modal.addEventListener('click',function(e){ if(e.target===modal) close(); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') close(); });
+  })();
+</script>
+</body>
+</html>

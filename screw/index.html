@@ -1,0 +1,2054 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>扭螺丝 · 3D三消</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1d2e; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; -webkit-tap-highlight-color: transparent; }
+  #app { position: relative; width: 100%; height: 100%; }
+  canvas { display: block; }
+
+  #topbar {
+    position: absolute; right: 14px; top: 12px;
+    display: none; gap: 10px; align-items: center;
+    z-index: 10; pointer-events: none;
+  }
+  #remain-card {
+    min-width: 182px; height: 68px;
+    border-radius: 34px;
+    background: linear-gradient(180deg, #6f95b2 0%, #5f859f 100%);
+    border: 2px solid rgba(255,255,255,.26);
+    box-shadow: inset 0 -8px 0 rgba(0,0,0,.14), 0 8px 18px rgba(0,0,0,.28);
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 16px 0 6px;
+  }
+  .screw-stack {
+    position: relative;
+    width: 56px; height: 60px;
+    transform: rotate(-14deg);
+    flex: none;
+  }
+  .screw-pill {
+    position:absolute; left: 20px;
+    width: 24px; height: 13px; border-radius: 9px;
+    background: linear-gradient(180deg,#ffd85f,#e9ac29);
+    border: 1px solid rgba(145,89,0,.55);
+    box-shadow: inset 0 -3px 0 rgba(0,0,0,.18), 0 2px 2px rgba(0,0,0,.2);
+  }
+  .screw-pill::before, .screw-pill::after {
+    content: ""; position:absolute; left:50%; top:50%; transform: translate(-50%,-50%);
+    background: rgba(120,75,0,.65); border-radius: 2px;
+  }
+  .screw-pill::before { width: 10px; height: 2px; }
+  .screw-pill::after { width: 2px; height: 10px; }
+  .screw-pill.s1 { top: 28px; }
+  .screw-pill.s2 { top: 17px; }
+  .screw-pill.s3 { top: 6px; }
+  .remain-count {
+    color:#fff; font-weight: 900;
+    text-shadow: 0 2px 0 rgba(0,0,0,.35);
+    display:flex; align-items: baseline; gap: 4px;
+    letter-spacing: .5px;
+  }
+  .remain-count #remain { font-size: 40px; line-height: 1; }
+  .remain-count small { font-size: 24px; line-height: 1; opacity:.98; }
+
+  .badge {
+    background: rgba(38,52,75,0.62); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #e8eefc; padding: 8px 12px; border-radius: 16px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.24);
+  }
+  .badge span { color: #ffe477; }
+
+  #demand-zone {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    display: none; gap: 18px; z-index: 10; pointer-events: none;
+  }
+  .demand-slot {
+    width: 128px; height: 112px; border-radius: 24px;
+    background: linear-gradient(180deg, #f8fbff 0%, #e8edf6 100%);
+    border: 7px solid var(--slot-c, #21d747);
+    padding: 10px 10px 12px;
+    box-shadow: inset 0 -9px 0 rgba(0,0,0,.08), 0 9px 18px rgba(0,0,0,.26);
+    transition: transform .25s, box-shadow .25s;
+    position: relative;
+  }
+  .demand-slot::before {
+    content:""; position:absolute; left:36px; top:-16px; width:54px; height:20px;
+    border-radius: 12px 12px 5px 5px;
+    background: linear-gradient(#dfe8f4,#8797ad);
+    box-shadow: inset 0 -5px 0 rgba(0,0,0,.18);
+    z-index:-1;
+  }
+  .demand-slot.active { transform: translateY(3px); }
+  .demand-slot.fx-complete {
+    animation: slot-full-hold .26s cubic-bezier(.2,.75,.15,1) both;
+    box-shadow: inset 0 -9px 0 rgba(0,0,0,.08), 0 0 0 4px rgba(255,255,255,.28), 0 12px 20px rgba(0,0,0,.3);
+  }
+  .demand-slot.fx-enter {
+    animation: slot-replace-in .34s cubic-bezier(.18,.9,.18,1) both;
+  }
+  @keyframes slot-full-hold {
+    0%   { transform: translateY(3px) scale(1); }
+    45%  { transform: translateY(-2px) scale(1.1); }
+    100% { transform: translateY(3px) scale(1.03); }
+  }
+  @keyframes slot-replace-in {
+    0%   { opacity: .25; transform: translateY(-12px) scale(.82); filter: saturate(.7); }
+    100% { opacity: 1; transform: translateY(3px) scale(1); filter: saturate(1); }
+  }
+  .demand-slot.empty {
+    visibility: hidden;
+    box-shadow: none;
+    border-color: transparent;
+  }
+  .demand-slot.locked {
+    --slot-c:#c8d5e0;
+    background: linear-gradient(180deg, #e8f1f8 0%, #cfdce8 100%);
+    opacity: .95;
+  }
+  .demand-slot .holes {
+    position:absolute; left:0; right:0; bottom:15px;
+    display:flex; justify-content:center; gap:16px;
+  }
+  .hole {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #313b56; border: 3px solid rgba(255,255,255,.75);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: inset 0 3px 4px rgba(0,0,0,.2);
+    transition: all .2s;
+  }
+  .hole.progress-filled {
+    border-color: rgba(255,255,255,.55);
+    background: radial-gradient(circle at 35% 28%, rgba(255,255,255,.75), rgba(255,255,255,0) 55%), var(--slot-c);
+    box-shadow: inset 0 -5px 0 rgba(0,0,0,.18), 0 3px 6px rgba(0,0,0,.22);
+  }
+  .unlock-icon {
+    width:54px; height:54px; border-radius:15px; margin:10px auto 2px;
+    background: radial-gradient(circle at 35% 25%, rgba(255,255,255,.65), rgba(255,255,255,0) 56%), #7bea22;
+    display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:42px; font-weight:900; line-height:1;
+    text-shadow:0 3px 0 rgba(0,0,0,.28);
+    box-shadow: inset 0 -7px 0 rgba(0,0,0,.18), 0 4px 8px rgba(0,0,0,.22);
+  }
+  .unlock-text { text-align:center; color:#fff; font-size:22px; font-weight:900; letter-spacing:1px; text-shadow:0 3px 0 #38516a, 0 0 3px #38516a; }
+
+  #spare-zone {
+    position: absolute; top: 138px; left: 50%; transform: translateX(-50%);
+    display:none; flex-direction:column; align-items:center; gap:0; z-index:10; pointer-events:none;
+  }
+  .spare-row { display:flex; gap:18px; padding:0; background:transparent; border:none; box-shadow:none; }
+  .spare-cell {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(35,47,68,.18); border:4px solid #a8bad8;
+    display:flex; align-items:center; justify-content:center; transition: all .2s;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.2), 0 3px 6px rgba(0,0,0,.16);
+  }
+  .spare-cell.filled {
+    border-color: rgba(255,255,255,.52);
+    background: radial-gradient(circle at 35% 28%, rgba(255,255,255,.75), rgba(255,255,255,0) 55%), var(--slot-c);
+    box-shadow: inset 0 -5px 0 rgba(0,0,0,.18), 0 4px 8px rgba(0,0,0,.24);
+  }
+
+  #exit-level {
+    position: absolute; left: 12px; top: 12px; z-index: 30;
+    display: none;
+    border: none; border-radius: 14px;
+    padding: 10px 14px; font-size: 14px; font-weight: 700;
+    color: #fff; background: rgba(20,30,50,.72);
+    border: 1px solid rgba(255,255,255,.28);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+  }
+
+  #level-select {
+    position: absolute; inset: 0; z-index: 25;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 25%, rgba(255,255,255,.08), rgba(0,0,0,.48));
+  }
+  .level-panel {
+    width: min(88vw, 520px);
+    background: linear-gradient(165deg,#2e3550,#1b2035);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 22px;
+    padding: 24px;
+    box-shadow: 0 18px 46px rgba(0,0,0,.42);
+  }
+  .level-panel h2 {
+    color: #fff; font-size: 22px; margin-bottom: 12px;
+  }
+  .level-panel p {
+    color: #c9d3ee; font-size: 13px; margin-bottom: 16px;
+  }
+  .level-list { display: grid; gap: 12px; }
+  .level-btn {
+    width: 100%; text-align: left; border: none; cursor: pointer;
+    border-radius: 14px; padding: 14px 16px;
+    color: #fff; font-size: 15px; font-weight: 700;
+    background: linear-gradient(135deg,#4f78ff,#43b9ff);
+    box-shadow: 0 8px 18px rgba(40,90,255,.35);
+  }
+  .level-btn.secondary {
+    background: linear-gradient(135deg,#ffaf4f,#ff7a43);
+    box-shadow: 0 8px 18px rgba(255,120,60,.34);
+  }
+  .custom-lib {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.12);
+  }
+  .custom-lib h4 { color:#dbe6ff; font-size:14px; margin-bottom:8px; }
+  .custom-lib-list { display:grid; gap:8px; }
+  .custom-lib-item {
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.04);
+    padding: 8px 10px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .custom-lib-name { color:#fff; font-size:13px; font-weight:700; }
+  .custom-lib-time { color:#9fb0d2; font-size:11px; margin-top:2px; }
+  .custom-lib-ops { display:flex; gap:6px; }
+  .custom-op {
+    border:none; cursor:pointer; border-radius:8px; padding:6px 8px;
+    color:#fff; font-size:12px; font-weight:700;
+    background: rgba(255,255,255,.13);
+  }
+  .custom-op.play { background: linear-gradient(135deg,#4dd07a,#2fae8e); }
+  .custom-op.edit { background: linear-gradient(135deg,#b06dff,#7d4dff); }
+  .custom-op.del { background: rgba(255,120,120,.2); color:#ffd4d4; }
+
+
+  #overlay {
+
+    position: absolute; inset:0; z-index: 50; display:none;
+    align-items:center; justify-content:center; background: rgba(10,12,20,0.78);
+    backdrop-filter: blur(6px);
+  }
+  #overlay .panel {
+    background: linear-gradient(160deg,#2a2f48,#1d2136); border:1px solid rgba(255,255,255,.12);
+    border-radius:22px; padding: 34px 40px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.5);
+    max-width: 360px;
+  }
+  #overlay h1 { color:#fff; font-size: 30px; margin-bottom: 10px; }
+  #overlay p { color:#b9c0d8; font-size:14px; line-height:1.7; margin-bottom: 22px; }
+  #overlay .emoji { font-size: 52px; margin-bottom: 8px; }
+  .btn {
+    pointer-events:auto; cursor:pointer; border:none; outline:none;
+    background: linear-gradient(135deg,#ffd166,#ff9f1c); color:#3a2600;
+    font-size:16px; font-weight:700; padding:13px 30px; border-radius:30px;
+    box-shadow: 0 8px 20px rgba(255,159,28,.4); transition: transform .15s;
+  }
+  .btn:active { transform: scale(.95); }
+
+  #toast {
+    position:absolute; top: 50%; left:50%; transform: translate(-50%,-50%);
+    background: rgba(0,0,0,.7); color:#fff; padding:10px 20px; border-radius:24px;
+    font-size:15px; z-index:40; opacity:0; pointer-events:none; transition: opacity .3s; font-weight:600;
+  }
+  #toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div id="remain-card" aria-label="剩余螺丝">
+      <div class="screw-stack" aria-hidden="true">
+        <span class="screw-pill s1"></span>
+        <span class="screw-pill s2"></span>
+        <span class="screw-pill s3"></span>
+      </div>
+      <div class="remain-count"><span id="remain">0</span><small>/<span id="remain-total">0</span></small></div>
+    </div>
+    <div class="badge">关卡需求 <span id="progress">0/0</span></div>
+  </div>
+  <button id="exit-level">← 退出关卡</button>
+  <div id="demand-zone"></div>
+  <div id="spare-zone"><div class="spare-row" id="spare-row"></div></div>
+  <div id="level-select">
+    <div class="level-panel">
+      <h2>选择关卡</h2>
+      <p>取下同色螺丝填满需求槽 · 可 360° 球形自由旋转查看物体</p>
+      <div class="level-list">
+        <button class="level-btn" data-level="1">关卡 1：玉米（苞叶 · 玉米粒 · 玉米芯）</button>
+        <button class="level-btn secondary" data-level="2">关卡 2：汉堡（顶包·生菜·芝士·肉饼·番茄·底包）</button>
+        <button class="level-btn" id="btn-play-custom" data-level="custom" style="background:linear-gradient(135deg,#4dd07a,#2fae8e);box-shadow:0 8px 18px rgba(45,200,140,.34);display:none;">▶ 试玩我的自定义关卡</button>
+        <button class="level-btn" id="btn-open-editor" style="background:linear-gradient(135deg,#b06dff,#7d4dff);box-shadow:0 8px 18px rgba(140,90,255,.34);">🛠 打开体素关卡编辑器</button>
+        <button class="level-btn" id="btn-open-sculpt" style="background:linear-gradient(135deg,#ff7ac8,#ff5d9e);box-shadow:0 8px 18px rgba(255,90,160,.34);">🪶 打开小体素雕塑编辑器</button>
+      </div>
+      <div class="custom-lib">
+        <h4>我的自定义关卡</h4>
+        <div class="custom-lib-list" id="custom-lib-list"></div>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
+  <div id="overlay">
+    <div class="panel">
+      <div class="emoji" id="ov-emoji">🎉</div>
+      <h1 id="ov-title">胜利！</h1>
+      <p id="ov-desc"></p>
+      <button class="btn" id="ov-btn">再来一局</button>
+    </div>
+  </div>
+</div>
+
+<script src="./vendor/three.min.js"></script>
+<script src="./mannequin.js"></script>
+<script>
+(function(){
+  // 支持直接双击打开（file://），无需本地服务器。只在核心脚本确实加载失败时提示。
+  function showErr(msg){
+    if (document.getElementById('fatal-err')) return;
+    var box = document.createElement('div');
+    box.id = 'fatal-err';
+    box.style.cssText = 'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;max-width:90vw;background:#3a1320;color:#ffd9d9;border:1px solid #ff6b6b;border-radius:12px;padding:14px 18px;font:13px/1.6 "Microsoft YaHei",sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);';
+    box.innerHTML = '<b style="color:#ff9a9a">页面核心脚本未加载</b><br>' + msg
+      + '<br><span style="color:#caa">请确认 vendor/three.min.js、mannequin.js 与本页面在同一目录下，未被移动或杀软拦截。</span>';
+    document.body.appendChild(box);
+  }
+  window.showEditorFatalError = showErr;
+  window.addEventListener('error', function(e){
+    if (e && e.target && e.target.tagName === 'SCRIPT') showErr('脚本文件加载失败：' + (e.target.getAttribute('src') || '内联脚本'));
+    // 普通运行期错误不再弹致命框盖屏
+  }, true);
+})();
+</script>
+<script>
+if (!window.THREE) throw new Error('本地 three.min.js 加载失败：请确认 vendor/three.min.js 存在。');
+
+const COLORS = [
+  { name:'red',    hex:0xff5d5d, css:'#ff5d5d' },
+  { name:'green',  hex:0x4dd07a, css:'#4dd07a' },
+  { name:'purple', hex:0xb06dff, css:'#b06dff' },
+  { name:'blue',   hex:0x4d8cff, css:'#4d8cff' },
+  { name:'gray',   hex:0x6c7184, css:'#6c7184' },
+  { name:'brown',  hex:0x9b6b43, css:'#9b6b43' },
+  { name:'white',  hex:0xffffff, css:'#ffffff' },
+  { name:'yellow', hex:0xffd166, css:'#ffd166' },
+];
+const SPARE_MAX = 5;
+const DEMAND_SHOW = 2;
+
+const app = document.getElementById('app');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1d2e);
+scene.fog = new THREE.Fog(0x1a1d2e, 22, 48);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 200);
+const orbit = { target: new THREE.Vector3(0, -0.75, 0), radius: 17.4, theta: 0, phi: Math.PI * 0.43, minPhi: 0.001, maxPhi: Math.PI - 0.001, zoomMin: 10, zoomMax: 40 };
+function updateCamera(){
+  const r = orbit.radius;
+  const sp = Math.sin(orbit.phi), cp = Math.cos(orbit.phi);
+  camera.position.set(orbit.target.x + r * sp * Math.sin(orbit.theta), orbit.target.y + r * cp, orbit.target.z + r * sp * Math.cos(orbit.theta));
+  camera.lookAt(orbit.target);
+}
+// 根据「人头缩放大小」同步可视边界，避免人模放大、相机随之拉远后被雾吞没
+// 或被滚轮上限钳制（进场首帧看不到东西、滚一下才显示）：
+// 人头放大 mScale 倍 → 视角整体拉远 mScale 倍 → 雾距离与缩放上下限也等比放大 mScale 倍，
+// 使可视边界与人头缩放严格对应。默认基准（mScale=1）：最近 4、最远 50、雾 near 22。
+// 缩放区间放宽到 4..50，让滚轮可以极近看细节 / 极远看全貌。
+const VIEW_BASE = { fogNear: 22, zoomMin: 4, zoomMax: 50 };
+function applyViewRangeForScale(mScale){
+  const s = (mScale > 0) ? mScale : 1;
+  orbit.zoomMin = VIEW_BASE.zoomMin * s;   // 最近距离
+  orbit.zoomMax = VIEW_BASE.zoomMax * s;   // 最远距离
+  if (scene.fog){
+    scene.fog.near = VIEW_BASE.fogNear * s;
+    // 雾远平面覆盖到最大缩放距离稍远处，保证拉到最远时模型仍在清晰段内
+    scene.fog.far = orbit.zoomMax + VIEW_BASE.fogNear * s;
+  }
+}
+updateCamera();
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// 光影/色调映射与编辑器（sculpt.js）完全一致，保证“编辑器所见 = 游玩所见”：
+// 不做色调映射（sRGB 直出），环境光 0.5 + 半球光 0.2 + 平行光 0.5，无额外补光。
+if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.toneMappingExposure = 1.0;
+app.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const hemi = new THREE.HemisphereLight(0xf1f8ff, 0x40476a, 0.2); scene.add(hemi);
+const dir = new THREE.DirectionalLight(0xffffff, 0.5);
+dir.position.set(9, 20, 13); dir.castShadow = true; dir.shadow.mapSize.set(2048, 2048);
+dir.shadow.camera.near = 1; dir.shadow.camera.far = 70; dir.shadow.camera.left = -22; dir.shadow.camera.right = 22; dir.shadow.camera.top = 22; dir.shadow.camera.bottom = -22;
+// 消除阴影自遮挡造成的“麻点/粗糙纹理”噪点（shadow acne），体素棱边尤其明显
+dir.shadow.bias = -0.0015; dir.shadow.normalBias = 0.02;
+scene.add(dir);
+
+// 光影随镜头水平旋转（仅左右/方位角，不跟随俯仰）：保持光源与地面的
+// 水平距离、高度不变，只让光源绕 Y 轴与镜头 orbit.theta 同步转动。
+const DIR_LIGHT_RADIUS_XZ = Math.hypot(9, 13);
+const DIR_LIGHT_HEIGHT = 20;
+const DIR_LIGHT_THETA_OFFSET = Math.atan2(9, 13) - orbit.theta;
+function updateLightAzimuth(){
+  const t = orbit.theta + DIR_LIGHT_THETA_OFFSET;
+  dir.position.set(
+    orbit.target.x + DIR_LIGHT_RADIUS_XZ * Math.sin(t),
+    DIR_LIGHT_HEIGHT,
+    orbit.target.z + DIR_LIGHT_RADIUS_XZ * Math.cos(t)
+  );
+}
+updateLightAzimuth();
+
+// 地面不再承接阴影（去除地上投影）
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(80,80), new THREE.ShadowMaterial({ opacity: 0.18 }));
+ground.rotation.x = -Math.PI/2; ground.position.y = -3; ground.receiveShadow = false; scene.add(ground);
+
+let gameGroup = new THREE.Group(); scene.add(gameGroup);
+const state = { screws:[], plates:[], demandQueue:[], demandSlots:[], demandCursor:0, demandSlotFX:{}, spares:[], totalScrews:0, remain:0, busy:false, over:false, currentLevel:null, maxLayer:0, activeLayer:0, customData:null };
+
+/* ---------------- 人形模特（展示半身像） ----------------
+ * 独立挂在 scene 上（不进 gameGroup，避免影响螺丝拾取），
+ * 自定义关卡显示，并随物体居中变换对齐；游戏中按相机角度（侧面/底部）渐隐。
+ */
+const DEFAULT_PHI = Math.PI * 0.43;   // 初始俯仰角（正面略俯视）
+let mannequin = null;
+function getMannequin(){
+  if (!mannequin && window.createMannequin){
+    mannequin = window.createMannequin({ color:0xe6e9f2, opacity:1 });
+    mannequin.visible = false;
+    scene.add(mannequin);
+  }
+  return mannequin;
+}
+function hideMannequin(){ if (mannequin) mannequin.visible = false; }
+// 目标透明度：按当前视角缩放距离 orbit.radius 在「滚轮最近~最远」范围内线性映射。
+//   · 拉到最远(zoomMax) -> 不透明度 100%（opacity=1，完全清晰）
+//   · 拉到最近(zoomMin) -> 不透明度 5%（opacity=0.05，几乎透明）
+// 用 orbit.radius（绕轴的缩放半径），它对「旋转视角」恒定，因此转动俯仰/方位角时
+// 透明度不变，只有滚轮拉近/拉远才改变。
+function mannequinTargetOpacity(){
+  const vs = mannequin && mannequin.userData.viewSphere;
+  if (!vs) return 1;
+  const near = orbit.zoomMin, far = orbit.zoomMax;
+  // t: 0 = 最近(zoomMin) … 1 = 最远(zoomMax)
+  let t = (orbit.radius - near) / Math.max(0.001, far - near);
+  t = Math.max(0, Math.min(1, t));
+  t = t * t * (3 - 2 * t);            // smoothstep 平滑过渡
+  return 0.05 + 0.95 * t;             // 最近 0.05（5% 不透明），最远 1（100% 不透明）
+}
+
+function markUserActive(){ }
+
+// 螺丝几何/固定色材质全局共享（所有螺丝尺寸一致），只有头部材质因颜色不同单独创建。
+// 布上百颗螺丝时避免重复创建几何/材质，显著减少内存与创建开销，缓解卡顿。头部圆柱分段 24->16。
+const _SCREW_GEO = {
+  head: new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16),
+  peg:  new THREE.CylinderGeometry(0.07, 0.06, 0.11, 10),
+  slot1: new THREE.BoxGeometry(0.2, 0.022, 0.05),
+  slot2: new THREE.BoxGeometry(0.05, 0.022, 0.2),
+};
+const _SCREW_PEG_MAT = new THREE.MeshStandardMaterial({ color:0xcbd1d9, metalness:0.576, roughness:0.32 });
+const _SCREW_SLOT_MAT = new THREE.MeshStandardMaterial({ color:0x2b2f3a, roughness:0.62 });
+function makeScrewMesh(colorHex) {
+  const g = new THREE.Group();
+  const head = new THREE.Mesh(_SCREW_GEO.head, new THREE.MeshPhysicalMaterial({ color: colorHex, roughness: 0.24, metalness: 0.064, clearcoat: 0.624, clearcoatRoughness: 0.18 }));
+  head.castShadow = true; head.position.y = 0.05; g.add(head);
+  const peg = new THREE.Mesh(_SCREW_GEO.peg, _SCREW_PEG_MAT); peg.position.y = -0.055; g.add(peg);
+  const s1 = new THREE.Mesh(_SCREW_GEO.slot1, _SCREW_SLOT_MAT); s1.position.y = 0.11;
+  const s2 = new THREE.Mesh(_SCREW_GEO.slot2, _SCREW_SLOT_MAT); s2.position.y = 0.11;
+  g.add(s1); g.add(s2);
+  return g;
+}
+
+function makeSoftBoxGeometry(w, h, d, r = 0.2){
+  const geo = new THREE.SphereGeometry(1, 18, 12);
+  const pos = geo.attributes.position;
+  for (let i=0; i<pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const sx = Math.sign(x) * (Math.pow(Math.abs(x), 0.55) * (w/2-r) + r*Math.abs(x));
+    const sy = Math.sign(y) * (Math.pow(Math.abs(y), 0.7) * (h/2-r*0.5) + r*0.5*Math.abs(y));
+    const sz = Math.sign(z) * (Math.pow(Math.abs(z), 0.55) * (d/2-r) + r*Math.abs(z));
+    pos.setXYZ(i, sx, sy, sz);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function makeCobMesh(length, radius, mat){
+  const profile = [];
+  const segs = 24;
+  for (let i=0; i<=segs; i++) {
+    const t = i / segs;
+    const y = (t - 0.5) * length;
+    const bulge = Math.pow(Math.sin(Math.PI * t), 0.42);
+    const r = radius * (0.18 + bulge * 0.82);
+    profile.push(new THREE.Vector2(r, y));
+  }
+  const geo = new THREE.LatheGeometry(profile, 36);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+
+function makeKernelMesh(colorHex){
+  const geo = makeSoftBoxGeometry(0.92, 0.78, 0.9, 0.22);
+  const mat = new THREE.MeshPhysicalMaterial({ color: colorHex, roughness: 0.22, metalness: 0.02, clearcoat: 0.9, clearcoatRoughness: 0.1 });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+
+function makeLeafMesh(mat, cobLen, widthFactor = 1){
+  const shape = new THREE.Shape();
+  const w = 2.45 * widthFactor;
+  const h = cobLen * 0.68;
+  shape.moveTo(-w*0.52, 0);
+  shape.bezierCurveTo(-w*0.95, -h*0.14, -w*0.7, -h*0.68, 0, -h);
+  shape.bezierCurveTo(w*0.7, -h*0.68, w*0.95, -h*0.14, w*0.52, 0);
+  shape.quadraticCurveTo(0, h*0.08, -w*0.52, 0);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.16, bevelEnabled: true, bevelThickness: 0.055, bevelSize: 0.075, bevelSegments: 2 });
+  geo.translate(0, 0, -0.08);
+  const pos = geo.attributes.position;
+  for (let i=0; i<pos.count; i++){
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const yn = Math.max(0, Math.min(1, -y / h));
+    const fold = Math.sin(yn * Math.PI * 0.92);
+    const edgeCurl = Math.pow(Math.abs(x)/(w*0.52), 1.75);
+    pos.setX(i, x * (1 - yn*0.1));
+    pos.setZ(i, z + fold*0.72 + edgeCurl*0.2);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+
+// 计算「体素模型」的世界包围盒：遍历 root 的所有 mesh，但跳过螺丝（type==='screw'）及其子树。
+// 用于进场取景/居中，使视角只由稳定的体素模型决定，不受螺丝数量/分布影响。
+function voxelModelBox(root){
+  const box = new THREE.Box3();
+  box.makeEmpty();
+  const tmp = new THREE.Box3();
+  root.updateMatrixWorld(true);
+  root.traverse(o => {
+    if (o.userData && o.userData.type === 'screw'){ return; } // 跳过螺丝（子孙一并忽略见下）
+    if (!o.isMesh) return;
+    // 若该 mesh 处于某个 screw 之下，也应忽略：向上查有无 screw 祖先
+    let p = o.parent, isUnderScrew = false;
+    while (p && p !== root){ if (p.userData && p.userData.type === 'screw'){ isUnderScrew = true; break; } p = p.parent; }
+    if (isUnderScrew) return;
+    tmp.setFromObject(o);
+    if (!tmp.isEmpty()) box.union(tmp);
+  });
+  return box;
+}
+
+// 计算螺丝为抵消其所属 plate.mesh（各轴可不同的）整体缩放所需的自身局部缩放系数
+// （base 为抵消前的基准尺寸倍数）。螺丝总是贴在体素/部件的某个轴对齐面上，法线
+// 必为 ±X/±Y/±Z 之一，因此 setFromUnitVectors(up, normal) 得到的旋转必是「轴置换」
+// 旋转——局部 x/y/z 轴旋转后必分别落在某个世界坐标轴上（可能带符号翻转，但不会
+// 产生斜切）。所以只需按每个局部轴旋转后落在哪个世界轴，用该轴上父级的缩放值
+// 做倒数，即可精确抵消（无论父级三轴缩放是否不同），保证螺丝世界尺寸恒定，
+// 不随自定义关卡里物件的「整体缩放」变化。
+function screwCounterScale(quat, groupScale, base){
+  base = base || 1;
+  const gs = [groupScale.x || 1, groupScale.y || 1, groupScale.z || 1];
+  const localAxes = [new THREE.Vector3(1,0,0), new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,1)];
+  const out = [1,1,1];
+  localAxes.forEach((a, i) => {
+    const w = a.clone().applyQuaternion(quat);
+    let axis = 0, best = Math.abs(w.x);
+    if (Math.abs(w.y) > best) { axis = 1; best = Math.abs(w.y); }
+    if (Math.abs(w.z) > best) { axis = 2; best = Math.abs(w.z); }
+    const s = gs[axis];
+    out[i] = base / (Math.abs(s) > 1e-6 ? s : 1);
+  });
+  return new THREE.Vector3(out[0], out[1], out[2]);
+}
+
+function attachScrew(plate, color, localPos, normalDir, screwScale = 1, extraLift = 0.05){
+  const screw = makeScrewMesh(color.hex);
+  const up = new THREE.Vector3(0,1,0);
+  const n = normalDir.clone().normalize();
+  const quat = new THREE.Quaternion().setFromUnitVectors(up, n);
+  screw.quaternion.copy(quat);
+  // 螺丝是 plate.mesh 的子物体，若该物件被设置了整体缩放（各轴可不同），需反向
+  // 抵消掉，避免螺丝被跟着拉伸/缩小——世界尺寸始终恒定。
+  screw.scale.copy(screwCounterScale(quat, plate.mesh.scale, screwScale));
+  const headHalfHeight = 0.045 * screwScale;
+  screw.position.copy(localPos).add(n.clone().multiplyScalar(headHalfHeight + extraLift));
+  screw.userData = { color, plate, type:'screw', taken:false, layer: plate.layer };
+  plate.mesh.add(screw);
+  state.screws.push(screw);
+  plate.screws.add(screw);
+}
+
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+function buildCornParts(){
+  // 关卡 1「玉米」三层结构（layer 越大越靠外/越上，先清外层才能取内层）：
+  //   layer 2 = 苞叶（最外层底板，遮住玉米棒身的螺丝）
+  //   layer 1 = 玉米粒（外圈，遮住玉米芯顶/底螺丝）
+  //   layer 0 = 玉米芯（最内，顶部与底部螺丝，被玉米粒环绕遮挡）
+  const parts = [];
+  const cobLen = 7.65, cobR = 1.72, rows = 6, perRow = 6;
+
+  // ---- layer 0：玉米芯（cob）顶/底螺丝 ----
+  const cobGroup = new THREE.Group();
+  const cobMat = new THREE.MeshPhysicalMaterial({ color:0xfff1a8, roughness:0.36, metalness:0.02, clearcoat:0.58, clearcoatRoughness:0.22 });
+  const cobMesh = makeCobMesh(cobLen, cobR, cobMat);
+  cobGroup.add(cobMesh);
+  const cap = new THREE.Mesh(makeSoftBoxGeometry(1.45, 0.42, 1.0, 0.26), new THREE.MeshPhysicalMaterial({ color:0xe9f69a, roughness:0.45, metalness:0.02, clearcoat:0.45 }));
+  cap.position.y = cobLen/2 + 0.17; cap.castShadow = true; cap.receiveShadow = true; cobGroup.add(cap);
+
+  const cobHoles = [];
+  for (let i=0;i<3;i++){
+    const a = (i/3)*Math.PI*2 + Math.PI/6;
+    cobHoles.push({ pos:new THREE.Vector3(Math.cos(a)*cobR*0.28,  cobLen/2-0.08, Math.sin(a)*cobR*0.28), normal:new THREE.Vector3(0,1,0) });
+    cobHoles.push({ pos:new THREE.Vector3(Math.cos(a)*cobR*0.28, -cobLen/2+0.08, Math.sin(a)*cobR*0.28), normal:new THREE.Vector3(0,-1,0) });
+  }
+  parts.push({ kind:'cob', layer:0, mesh:cobGroup, holes:cobHoles, screwCount: 6, screwScale: 0.94, screwLift: 0.05 });
+
+  // ---- layer 1：玉米粒（kernel）外圈，每粒 1 颗螺丝 ----
+  const kernelTones = [0xffd64b, 0xffe066, 0xffeda5, 0xf7d54a];
+  for (let r=0; r<rows; r++){
+    const y = cobLen/2 - 0.8 - (r/(rows-1)) * (cobLen-1.7);
+    const taper = Math.pow(Math.sin(Math.PI * ((r + 0.45)/(rows - 0.1))), 0.34);
+    const rr = cobR * (0.74 + taper * 0.34);
+    for (let k=0; k<perRow; k++) {
+      const a = (k/perRow)*Math.PI*2 + (r%2)*(Math.PI/perRow);
+      const n = new THREE.Vector3(Math.cos(a), 0.055, Math.sin(a)).normalize();
+      const tone = kernelTones[(r + k + Math.floor(Math.random()*2)) % kernelTones.length];
+      const kernel = makeKernelMesh(tone);
+      kernel.position.set(Math.cos(a)*rr, y, Math.sin(a)*rr);
+      const holePos = n.clone().multiplyScalar(0.47);
+      parts.push({ kind:'kernel', layer:1, mesh:kernel, holes:[{ pos: holePos, normal: n }], screwCount: 1, screwScale: 0.92, screwLift: 0.036 });
+    }
+  }
+
+  // ---- layer 2：苞叶（leaf）最外层底板，遮住下层玉米粒 ----
+  const leafMat = new THREE.MeshPhysicalMaterial({ color:0x86d23f, roughness:0.5, metalness:0.02, clearcoat:0.24, clearcoatRoughness:0.34, side:THREE.DoubleSide });
+  const leafConfigs = [
+    { pos:[-2.05,-2.05, 0.05], rot:[0, -1.18, 0.28], scale:[0.88,0.92,1.0], width:0.92, holes:[[-0.45,-1.45,0.35],[0.38,-3.85,0.32]] },
+    { pos:[ 2.08,-2.10, 0.10], rot:[0,  1.18,-0.24], scale:[0.86,0.9,1.0], width:0.9, holes:[[0.42,-1.55,0.34],[-0.35,-3.75,0.3]] },
+    { pos:[ 0.02,-2.78, 1.52], rot:[0,  0.0, 0.03], scale:[1.18,0.95,1.05], width:1.18, holes:[[-0.78,-1.22,0.38],[0.82,-3.55,0.34]] },
+  ];
+  leafConfigs.forEach((cfg) => {
+    const leaf = makeLeafMesh(leafMat, cobLen, cfg.width);
+    leaf.position.set(...cfg.pos); leaf.rotation.set(...cfg.rot); leaf.scale.set(...cfg.scale);
+    const holes = cfg.holes.map(p => ({ pos:new THREE.Vector3(...p), normal:new THREE.Vector3(0,0,1) }));
+    parts.push({ kind:'leaf', layer:2, mesh:leaf, holes, screwCount: 2, screwScale: 0.88, screwLift: 0.044 });
+  });
+  return parts;
+}
+
+function buildBurgerParts(){
+  // 关卡 2「汉堡」——参考组装图自下而上堆叠（所有部件同层 layer:0，可任意顺序拆取）：
+  //   底包(bunBottom) → 番茄(tomato) → 肉饼(patty) → 芝士(cheese) → 生菜(lettuce) → 顶包(bunTop)
+  // 每一类均分 4 小块（按四象限切分），每块布有螺丝。
+  const parts = [];
+  const quarter = Math.PI / 2;
+
+  const bunTopMat    = new THREE.MeshStandardMaterial({ color:0xd98c3a, roughness:0.6,  metalness:0.02, flatShading:true });
+  const bunBottomMat = new THREE.MeshStandardMaterial({ color:0xd9a66a, roughness:0.62, metalness:0.02, flatShading:true });
+  const lettuceMat   = new THREE.MeshStandardMaterial({ color:0x6cc23a, roughness:0.74, metalness:0.02, flatShading:true });
+  const pattyMat     = new THREE.MeshStandardMaterial({ color:0x824631, roughness:0.82, metalness:0.02, flatShading:true });
+  const cheeseMat    = new THREE.MeshStandardMaterial({ color:0xf4b733, roughness:0.5,  metalness:0.02, flatShading:true });
+  const tomatoMat    = new THREE.MeshStandardMaterial({ color:0xe34134, roughness:0.55, metalness:0.02, flatShading:true });
+  const sesameMat    = new THREE.MeshStandardMaterial({ color:0xf4df9a, roughness:0.66, metalness:0.02, flatShading:true });
+
+  function addPart(kind, mesh, holes, screwCount, screwScale = 0.9, screwLift = 0.035){
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    parts.push({ kind, layer: 0, mesh, holes, screwCount, screwScale, screwLift });
+  }
+  // 顶面法线（略微向外倾斜，贴合圆台侧坡）
+  const topNormal = (ang, tilt = 0.2) => new THREE.Vector3(Math.cos(ang)*tilt, 1, Math.sin(ang)*tilt).normalize();
+
+  for (let i=0; i<4; i++) {
+    const start = i * quarter;
+    const mid = start + quarter * 0.5;
+
+    // ---- 底部面包片（4 小块）----
+    const bunBottom = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.0, 2.7, 1.0, 6, 1, false, start, quarter),
+      bunBottomMat
+    );
+    bunBottom.position.y = -2.5;
+    addPart('burger-bun-bottom', bunBottom, [
+      { pos:new THREE.Vector3(Math.cos(mid)*1.25, 0.46, Math.sin(mid)*1.25), normal:topNormal(mid,0.18) },
+      { pos:new THREE.Vector3(Math.cos(mid+0.22)*2.0, 0.4, Math.sin(mid+0.22)*2.0), normal:topNormal(mid+0.22,0.32) },
+    ], 2, 0.9, 0.034);
+
+    // ---- 番茄片（4 小块）----
+    const tomato = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.7, 2.6, 0.4, 7, 1, false, start, quarter),
+      tomatoMat
+    );
+    tomato.position.y = -1.6;
+    addPart('burger-tomato', tomato, [
+      { pos:new THREE.Vector3(Math.cos(mid)*1.55, 0.2, Math.sin(mid)*1.55), normal:topNormal(mid,0.12) }
+    ], 1, 0.84, 0.03);
+
+    // ---- 汉堡肉（4 小块）----
+    const patty = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.9, 2.82, 1.0, 6, 1, false, start, quarter),
+      pattyMat
+    );
+    patty.position.y = -0.85;
+    addPart('burger-patty', patty, [
+      { pos:new THREE.Vector3(Math.cos(mid)*1.2, 0.48, Math.sin(mid)*1.2), normal:topNormal(mid,0.14) },
+      { pos:new THREE.Vector3(Math.cos(mid-0.2)*2.05, 0.42, Math.sin(mid-0.2)*2.05), normal:topNormal(mid-0.2,0.34) },
+    ], 2, 0.9, 0.034);
+
+    // ---- 芝士片（4 小块，方形错角，边缘下垂感）----
+    const cheese = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.95, 2.95, 0.22, 4, 1, false, start + 0.18, quarter),
+      cheeseMat
+    );
+    cheese.position.y = -0.18;
+    addPart('burger-cheese', cheese, [
+      { pos:new THREE.Vector3(Math.cos(mid)*1.5, 0.12, Math.sin(mid)*1.5), normal:topNormal(mid,0.1) }
+    ], 1, 0.84, 0.03);
+
+    // ---- 生菜叶（4 小块，边缘波浪起伏）----
+    const lettuceGeo = new THREE.CylinderGeometry(3.05, 2.9, 0.4, 9, 1, false, start, quarter);
+    const lp = lettuceGeo.attributes.position;
+    for (let vi=0; vi<lp.count; vi++) {
+      const x = lp.getX(vi), y = lp.getY(vi), z = lp.getZ(vi);
+      const ang = Math.atan2(z, x);
+      const bump = 1 + 0.16 * Math.sin(ang * 7 + i * 1.1);
+      lp.setX(vi, x * bump);
+      lp.setZ(vi, z * bump);
+      if (y > 0) lp.setY(vi, y + 0.1 * Math.sin(ang * 7 + i));
+    }
+    lp.needsUpdate = true;
+    lettuceGeo.computeVertexNormals();
+    const lettuce = new THREE.Mesh(lettuceGeo, lettuceMat);
+    lettuce.position.y = 0.2;
+    addPart('burger-lettuce', lettuce, [
+      { pos:new THREE.Vector3(Math.cos(mid)*1.6, 0.2, Math.sin(mid)*1.6), normal:topNormal(mid,0.12) }
+    ], 1, 0.84, 0.03);
+
+    // ---- 顶部面包片（4 小块圆顶）----
+    const bunTopGeo = new THREE.SphereGeometry(3.0, 10, 7, start, quarter, 0, Math.PI/2);
+    bunTopGeo.scale(1, 0.66, 1);
+    const bunTop = new THREE.Mesh(bunTopGeo, bunTopMat);
+    bunTop.position.y = 0.55;
+
+    // 芝麻（装饰，贴在圆顶表面）
+    for (let s=0; s<3; s++){
+      const a = mid + (s-1) * 0.18;
+      const ph = 0.5 + Math.random()*0.5; // 顶角范围
+      const seed = new THREE.Mesh(new THREE.DodecahedronGeometry(0.085, 0), sesameMat);
+      const sr = 3.0 * Math.sin(ph);
+      seed.position.set(Math.cos(a)*sr, 3.0*0.66*Math.cos(ph), Math.sin(a)*sr);
+      seed.rotation.set(Math.random()*0.8, Math.random()*0.8, Math.random()*0.8);
+      seed.castShadow = true;
+      bunTop.add(seed);
+    }
+
+    addPart('burger-bun-top', bunTop, [
+      { pos:new THREE.Vector3(Math.cos(mid)*1.3, 1.55, Math.sin(mid)*1.3), normal:topNormal(mid,0.22) },
+      { pos:new THREE.Vector3(Math.cos(mid+0.22)*2.1, 1.05, Math.sin(mid+0.22)*2.1), normal:topNormal(mid+0.22,0.5) },
+    ], 2, 0.9, 0.035);
+  }
+
+  // 总数：底部面包8 + 番茄4 + 肉饼8 + 芝士4 + 生菜4 + 顶部面包8 = 36
+  return parts;
+}
+
+/* =========================================================
+ * 自定义关卡（来自体素编辑器）
+ * 数据格式：{ name, objects:[ {colorName, layer, pos, rotY, voxels:{"x,y,z":colorName}, screws:[{key,face,color}]} ] }
+ * 每个物件 -> 一个 part；体素合并为 group；螺丝颜色固定（不走随机池）。
+ * ========================================================= */
+const VOX = 1;
+const CUSTOM_SCREW_DIAMETER = 0.25;   // 自定义关卡螺丝固定为 0.25（与编辑器 sculpt.js 的 SCREW_DIAMETER 保持一致）
+
+// 体素值解码：兼容 "#rrggbb" / "#rrggbb|shape|dir" / "...|f0,..,f5"(单面颜色) /
+// "...|mult"(体素尺寸倍数，支持小数：0.25/0.5/1/1.5/2/3) / 旧颜色名
+function decodeVoxelValue(v){
+  if (typeof v !== 'string') return { color:v, shape:'cube', dir:2, faces:null, mult:1, alpha:1, params:null };
+  if (v.indexOf('|') < 0) return { color:v, shape:'cube', dir:2, faces:null, mult:1, alpha:1, params:null };
+  const parts = v.split('|');
+  const color = parts[0], shape = parts[1] || 'cube', dir = parseInt(parts[2])||0;
+  let faces = null;
+  if (parts[3] && parts[3] !== '-') {
+    faces = parts[3].split(',').map(x => (x && x !== '-') ? '#' + x : null);
+    while (faces.length < 6) faces.push(null);
+  }
+  const mult = parts[4] ? (parseFloat(parts[4]) || 1) : 1;
+  const alphaRaw = parts[5] ? parseFloat(parts[5]) : 1;
+  const alpha = (typeof alphaRaw === 'number' && !isNaN(alphaRaw)) ? Math.max(0, Math.min(1, alphaRaw)) : 1;
+  let params = null;
+  if (parts[6]) { params = parts[6].split(',').map(x => parseFloat(x)).filter(n => !isNaN(n)); if (!params.length) params = null; }
+  return { color, shape, dir, faces, mult, alpha, params };
+}
+// 把单面颜色字符串(#rrggbb)转 int
+function faceColorHex(f, fallback){
+  if (typeof f === 'string' && f[0] === '#') { const n = parseInt(f.slice(1), 16); if (!isNaN(n)) return n; }
+  return fallback;
+}
+// 体素颜色：支持自定义 hex 字符串（#rrggbb）或旧版 8 色名
+function customColorHex(v){
+  const color = decodeVoxelValue(v).color;
+  if (typeof color === 'string' && color[0] === '#') { const n = parseInt(color.slice(1), 16); return isNaN(n) ? 0xcccccc : n; }
+  const c = COLORS.find(x=>x.name===color); return c ? c.hex : 0xcccccc;
+}
+
+// 形状几何（与编辑器 sculpt.js 对齐）：dir 0..5 = +x,-x,+y,-y,+z,-z
+const CUSTOM_DIR_VECS = [
+  new THREE.Vector3(1,0,0),  new THREE.Vector3(-1,0,0),
+  new THREE.Vector3(0,1,0),  new THREE.Vector3(0,-1,0),
+  new THREE.Vector3(0,0,1),  new THREE.Vector3(0,0,-1),
+];
+// ---- 合并两个 BufferGeometry（避免依赖 BufferGeometryUtils）----
+function mergeGeosGame(g1, g2){
+  const p1 = g1.getAttribute('position'), n1 = g1.getAttribute('normal');
+  const p2 = g2.getAttribute('position'), n2 = g2.getAttribute('normal');
+  const c1 = p1.count, c2 = p2.count, total = c1 + c2;
+  const pos = new Float32Array(total * 3), norm = new Float32Array(total * 3);
+  pos.set(p1.array, 0); pos.set(p2.array, c1 * 3);
+  norm.set(n1.array, 0); norm.set(n2.array, c1 * 3);
+  const idx = [];
+  if (g1.index) { const i = g1.index.array; for (let j = 0; j < i.length; j += 3) idx.push(i[j], i[j+1], i[j+2]); }
+  else { for (let j = 0; j < c1; j += 3) idx.push(j, j+1, j+2); }
+  if (g2.index) { const i = g2.index.array; for (let j = 0; j < i.length; j += 3) idx.push(i[j]+c1, i[j+1]+c1, i[j+2]+c1); }
+  else { for (let j = 0; j < c2; j += 3) idx.push(j+c1, j+1+c1, j+2+c1); }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  out.setAttribute('normal', new THREE.BufferAttribute(norm, 3));
+  out.setIndex(idx);
+  return out;
+}
+
+// 参数化形状默认参数（与编辑器 SHAPE_PARAM_DEFAULTS 一致）
+const CUSTOM_SHAPE_PARAM_DEFAULTS = {
+  cylinder:[0.5,1.0], halfcylinder:[0.5,1.0], cone:[0.2,0.5,1.0], pyramid:[4,0.5,1.0,0], torusp:[0.4,1.0,0.4],
+};
+function customGetParams(shape, params){
+  const def = CUSTOM_SHAPE_PARAM_DEFAULTS[shape] || [];
+  const out = def.slice();
+  if (Array.isArray(params)) for (let i=0;i<def.length;i++) if (isFinite(params[i])) out[i]=params[i];
+  return out;
+}
+// 三角顶点数组 -> 非索引 BufferGeometry（平坦法线），与编辑器 trisToGeometry 一致
+function trisToGeoGame(tris){
+  const pos = new Float32Array(tris.length*3);
+  for (let i=0;i<tris.length;i++){ pos[i*3]=tris[i][0]; pos[i*3+1]=tris[i][1]; pos[i*3+2]=tris[i][2]; }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  g.computeVertexNormals();
+  return g;
+}
+
+function makeCustomVoxelGeometry(shape, dir, size, params){
+  let g;
+  if (shape === 'half') {
+    // 与编辑器一致：基准 dir=+Y 时平切面(+Y)位于顶边界，圆弧向内凸
+    const r = size / 2;
+    const cyl = new THREE.CylinderGeometry(r, r, size, 24, 1, false, 0, Math.PI);
+    cyl.rotateZ(-Math.PI/2);
+    cyl.translate(0, r, 0);
+    // 补充平切面（正方形 2r×2r，位于 y=r 平面，法线朝 +Y）
+    const cap = new THREE.PlaneGeometry(size, size);
+    cap.rotateX(-Math.PI / 2);
+    cap.translate(0, r, 0);
+    g = mergeGeosGame(cyl, cap);
+  } else if (shape === 'tri') {
+    // 直角三棱柱：纯手工 BufferGeometry，避免依赖 THREE.Shape/ExtrudeGeometry
+    // （当前 vendor/three.min.js 构建未包含该模块，用它会抛路径报错，导致整个关卡构建中断）。
+    // 与编辑器 sculpt.js 的 makeTriGeometry 完全一致，保证编辑与游戏渲染同形。
+    const s = size / 2;
+    const A0=[-s, s, s], B0=[s, s, s], C0=[-s,-s, s];   // 前截面 z=+s
+    const A1=[-s, s,-s], B1=[s, s,-s], C1=[-s,-s,-s];   // 后截面 z=-s
+    const tris = [
+      A0,B0,C0,              // 前面 +Z（CCW 法线朝 +Z）
+      A1,C1,B1,              // 后面 -Z（CCW 法线朝 -Z）
+      A0,B0,B1, A0,B1,A1,    // 顶面 +Y（完整正方形贴合面）
+      A0,A1,C1, A0,C1,C0,    // 左竖面 -X（完整正方形贴合面）
+      B0,C0,C1, B0,C1,B1,    // 斜面
+    ];
+    const pos = new Float32Array(tris.length * 3);
+    for (let i = 0; i < tris.length; i++){ pos[i*3]=tris[i][0]; pos[i*3+1]=tris[i][1]; pos[i*3+2]=tris[i][2]; }
+    g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.computeVertexNormals();   // 非索引 -> 每面平坦法线
+  } else if (shape === 'sphere') {
+    // 球：内切体素盒（半径 = size/2），居中；球对称，dir 不影响外观。与编辑器一致。
+    g = new THREE.SphereGeometry(size/2, 20, 14);
+  } else if (shape === 'halfsphere') {
+    // 半球：平切面(贴合面)朝基准 +Y、圆顶朝 -Y，平切面补圆盘封口。与编辑器一致。
+    const r = size/2;
+    const dome = new THREE.SphereGeometry(r, 20, 8, 0, Math.PI*2, Math.PI/2, Math.PI/2); // 下半球(圆顶朝 -Y)
+    const disk = new THREE.CircleGeometry(r, 20);
+    disk.rotateX(-Math.PI/2);   // 法线朝 +Y
+    g = mergeGeosGame(dome, disk);
+    g.translate(0, r, 0);
+  } else if (shape === 'torus') {
+    // 圆环：躺平（环平面水平 XZ、中轴 +Y），外缘贴近体素盒。与编辑器一致。
+    const tube = size * 0.16;
+    const ring = size/2 - tube;
+    g = new THREE.TorusGeometry(Math.max(0.01, ring), Math.max(0.01, tube), 12, 24);
+    g.rotateX(Math.PI/2);
+  } else if (shape === 'cylinder') {
+    const [r,h] = customGetParams('cylinder', params);
+    g = new THREE.CylinderGeometry(Math.max(0.01,r), Math.max(0.01,r), Math.max(0.01,h), 28);
+  } else if (shape === 'halfcylinder') {
+    // 取 theta∈[-π/2,+π/2] 才是 z≥0 半边：直径切面为 z=0 的 XY 平面（x∈[-r,r], y∈[-h/2,h/2]）
+    let [r,h] = customGetParams('halfcylinder', params); r=Math.max(0.01,r); h=Math.max(0.01,h);
+    const half = new THREE.CylinderGeometry(r, r, h, 24, 1, false, -Math.PI/2, Math.PI);
+    const cap = new THREE.PlaneGeometry(2*r, h);
+    cap.rotateY(Math.PI); // 外法线 -Z，与 z≥0 半实体一致
+    g = mergeGeosGame(half, cap);
+  } else if (shape === 'cone') {
+    // 下半径(大)那面为贴合面，放到 +Y 端（与编辑器一致）
+    let [rt,rb,h] = customGetParams('cone', params); rt=Math.max(0,rt); rb=Math.max(0.01,rb); h=Math.max(0.01,h);
+    g = new THREE.CylinderGeometry(rb, rt, h, 28);
+  } else if (shape === 'pyramid') {
+    // 底面(贴合面)在 +Y、尖顶朝 -Y（与编辑器一致）
+    let [n,r,h,deg] = customGetParams('pyramid', params);
+    n=Math.max(3,Math.round(n)); r=Math.max(0.01,r); h=Math.max(0.01,h);
+    const ang = THREE.MathUtils.degToRad(deg||0), half=h/2;
+    const base=[]; for (let i=0;i<n;i++){ const a=(i/n)*Math.PI*2-Math.PI/2; base.push([Math.cos(a)*r,half,Math.sin(a)*r]); }
+    const off = Math.tan(Math.min(Math.max(ang,-1.4),1.4))*h;
+    const apexP=[off,-half,0], c=[0,half,0], tris=[];
+    for (let i=0;i<n;i++){ const b0=base[i], b1=base[(i+1)%n]; tris.push(b1,b0,apexP); }
+    for (let i=0;i<n;i++){ const b0=base[i], b1=base[(i+1)%n]; tris.push(c,b0,b1); }
+    g = trisToGeoGame(tris);
+  } else if (shape === 'torusp') {
+    let [innerD,outerD,h] = customGetParams('torusp', params);
+    let ri=Math.max(0,innerD/2), ro=Math.max(ri+0.01,outerD/2); h=Math.max(0.01,h);
+    const half=h/2, N=28, tris=[];
+    for (let i=0;i<N;i++){
+      const a0=(i/N)*Math.PI*2, a1=((i+1)/N)*Math.PI*2;
+      const co0=Math.cos(a0),si0=Math.sin(a0),co1=Math.cos(a1),si1=Math.sin(a1);
+      const oT0=[co0*ro,half,si0*ro],oT1=[co1*ro,half,si1*ro],oB0=[co0*ro,-half,si0*ro],oB1=[co1*ro,-half,si1*ro];
+      const iT0=[co0*ri,half,si0*ri],iT1=[co1*ri,half,si1*ri],iB0=[co0*ri,-half,si0*ri],iB1=[co1*ri,-half,si1*ri];
+      tris.push(oB0,oB1,oT1); tris.push(oB0,oT1,oT0);
+      tris.push(iB1,iB0,iT0); tris.push(iB1,iT0,iT1);
+      tris.push(iT0,oT0,oT1); tris.push(iT0,oT1,iT1);
+      tris.push(iB0,oB1,oB0); tris.push(iB0,iB1,oB1);
+    }
+    g = trisToGeoGame(tris);
+  } else {
+    return new THREE.BoxGeometry(size, size, size);
+  }
+  const from = new THREE.Vector3(0,1,0);
+  const to = CUSTOM_DIR_VECS[dir] || from;
+  if (!from.equals(to)) {
+    // 旧版 three 的 BufferGeometry 无 applyQuaternion，改用 applyMatrix4(旋转矩阵) 以兼容
+    const q = new THREE.Quaternion().setFromUnitVectors(from, to);
+    const m = new THREE.Matrix4().makeRotationFromQuaternion(q);
+    if (typeof g.applyMatrix4 === 'function') g.applyMatrix4(m);
+    else if (typeof g.applyMatrix === 'function') g.applyMatrix(m);
+  }
+  return g;
+}
+
+function buildCustomParts(data){
+  const parts = [];
+  // 全体螺丝大小倍数：与编辑器 level.screwSize 保持一致（默认 1）
+  const screwSizeMul = (data && data.screwSize > 0) ? data.screwSize : 1;
+  (data.objects || []).forEach(obj => {
+    const VS = (obj.voxelSize > 0) ? obj.voxelSize : VOX;   // 每物件可调体素尺寸（小体素）
+    const group = new THREE.Group();
+    // 体素（支持方块/半圆/三角形状；支持每个体素独立的尺寸倍数 mult，可为小数，
+    // 实现同一物件内混合不同大小的体素）
+    Object.keys(obj.voxels || {}).forEach(key => {
+      const [x,y,z] = key.split(',').map(Number);
+      const dec = decodeVoxelValue(obj.voxels[key]);
+      const mult = dec.mult || 1;
+      const geo = makeCustomVoxelGeometry(dec.shape, dec.dir, VS*mult, dec.params);
+      const base = customColorHex(obj.voxels[key]);
+      const alpha = (typeof dec.alpha === 'number' && !isNaN(dec.alpha)) ? Math.max(0, Math.min(1, dec.alpha)) : 1;
+      const transparent = alpha < 1 - 1e-6;
+      // 曲面/参数化形状（半圆柱、圆环柱、半球等）双面渲染，避免端面/内壁被背面剔除而“看着没封面”
+      const side = (dec.shape && dec.shape !== 'cube') ? THREE.DoubleSide : THREE.FrontSide;
+      const matOpts = { roughness:0.78, metalness:0.04, flatShading:true, transparent, opacity: alpha, depthWrite: alpha >= 0.95, side };
+      let mat;
+      if (dec.faces && dec.shape === 'cube') {
+        // 每面颜色（BoxGeometry 面序 +X,-X,+Y,-Y,+Z,-Z）
+        mat = dec.faces.map(f => new THREE.MeshStandardMaterial(Object.assign({ color: faceColorHex(f, base) }, matOpts)));
+      } else {
+        mat = new THREE.MeshStandardMaterial(Object.assign({ color: base }, matOpts));
+      }
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set((x+mult/2)*VS, (y+mult/2)*VS, (z+mult/2)*VS);
+      m.castShadow = true; m.receiveShadow = true;
+      group.add(m);
+    });
+    // 物件整体变换：三轴旋转 + 整体缩放，且旋转与缩放均围绕物件几何中心
+    const sc = obj.scale || { x:1, y:1, z:1 };
+    const scx = sc.x>0?sc.x:1, scy = sc.y>0?sc.y:1, scz = sc.z>0?sc.z:1;
+    group.scale.set(scx, scy, scz);
+    // 三轴欧拉旋转（顺序 XYZ，与编辑器一致），兼容仅有 rotY 的旧数据
+    const euler = new THREE.Euler(
+      THREE.MathUtils.degToRad(obj.rotX||0),
+      THREE.MathUtils.degToRad(obj.rotY||0),
+      THREE.MathUtils.degToRad(obj.rotZ||0),
+      'XYZ'
+    );
+    const quat = new THREE.Quaternion().setFromEuler(euler);
+    group.quaternion.copy(quat);
+    // 计算体素包围盒几何中心（局部坐标，按每个体素的实际尺寸计入）
+    let bMinx=Infinity,bMiny=Infinity,bMinz=Infinity,bMaxx=-Infinity,bMaxy=-Infinity,bMaxz=-Infinity;
+    Object.keys(obj.voxels || {}).forEach(key => {
+      const [x,y,z]=key.split(',').map(Number);
+      const mult = decodeVoxelValue(obj.voxels[key]).mult || 1;
+      const x2=x+mult, y2=y+mult, z2=z+mult;
+      if(x<bMinx)bMinx=x; if(y<bMiny)bMiny=y; if(z<bMinz)bMinz=z;
+      if(x2>bMaxx)bMaxx=x2; if(y2>bMaxy)bMaxy=y2; if(z2>bMaxz)bMaxz=z2;
+    });
+    let ox=0, oy=0, oz=0;
+    if (isFinite(bMinx)) {
+      // 以几何中心 c 为轴心：position = pos + c - R·(S∘c)
+      const ccx=((bMinx+bMaxx)/2)*VS, ccy=((bMiny+bMaxy)/2)*VS, ccz=((bMinz+bMaxz)/2)*VS;
+      const scaledC = new THREE.Vector3(ccx*scx, ccy*scy, ccz*scz).applyQuaternion(quat);
+      ox = ccx - scaledC.x;
+      oy = ccy - scaledC.y;
+      oz = ccz - scaledC.z;
+    }
+    group.position.set((obj.pos?.x||0)+ox, (obj.pos?.y||0)+oy, (obj.pos?.z||0)+oz);
+
+    // 螺丝孔（局部坐标），并记录固定颜色 + 每颗独立尺寸
+    const holes = [];
+    const fixedColors = [];
+    (obj.screws || []).forEach(s => {
+      let center, normal;
+      if (s.pos && s.normal) {
+        // 新格式：直接是局部坐标 + 法线
+        center = new THREE.Vector3(s.pos[0], s.pos[1], s.pos[2]);
+        normal = new THREE.Vector3(s.normal[0], s.normal[1], s.normal[2]).normalize();
+      } else {
+        // 旧格式：key + face，按体素尺寸换算位置（位置随体素尺寸，但螺丝本体尺寸固定）
+        const [x,y,z] = String(s.key).split(',').map(Number);
+        const face = s.face || [0,1,0];
+        center = new THREE.Vector3(
+          x*VS+VS/2 + face[0]*VS/2,
+          y*VS+VS/2 + face[1]*VS/2,
+          z*VS+VS/2 + face[2]*VS/2
+        );
+        normal = new THREE.Vector3(face[0],face[1],face[2]).normalize();
+      }
+      // 世界直径 = 基准 0.25 × 全体螺丝大小倍数（与编辑器统一），不随 voxelSize 变化
+      // 游戏 makeScrewMesh 基准头半径 0.2 -> 直径 0.4，故 screwScale = 直径 / 0.4
+      const screwScale = (CUSTOM_SCREW_DIAMETER * screwSizeMul) / 0.4;
+      // 贴面对齐编辑器：attachScrew 会额外加 headHalfHeight(=0.045*scale)，
+      // 抵消后使螺丝头底部离面 = dia*0.05，与 sculpt.js 的 lift 完全一致
+      const headHalfHeight = 0.045 * screwScale;
+      holes.push({ pos: center, normal, scale: screwScale, lift: CUSTOM_SCREW_DIAMETER * 0.05 - headHalfHeight });
+      fixedColors.push(COLORS.find(c=>c.name===s.color) || COLORS[0]);
+    });
+
+    parts.push({
+      kind:'voxel', layer: obj.layer ?? 0, mesh: group,
+      holes, screwCount: holes.length, screwScale: 0.95, screwLift: 0.05,
+      fixedColors,   // 标记：使用固定颜色
+      groupId: (obj.groupId > 0) ? obj.groupId : null,   // 绑定组：同组物件螺丝全取光后一起掉落
+    });
+  });
+  return parts;
+}
+
+function makeColorPool(total){
+  // total 必须是 3 的倍数；颜色种类强制 5-8 种
+  const groups = total / 3;                       // 螺丝组数（每组同色 3 个）
+  // 颜色种类下限 5、上限 8，且不超过组数（每种颜色至少占 1 组）
+  const minKind = Math.min(5, groups);
+  const maxKind = Math.min(8, groups);
+  const colorKind = minKind + Math.floor(Math.random() * (maxKind - minKind + 1));
+  const use = shuffle([...COLORS]).slice(0, colorKind);
+  // 先保证每种颜色至少 1 组，剩余组随机分配
+  const perColor = new Array(use.length).fill(1);
+  let remain = groups - use.length;
+  while (remain > 0) { perColor[Math.floor(Math.random()*use.length)]++; remain--; }
+  const pool = [];
+  use.forEach((c, idx) => { for(let g=0; g<perColor[idx]; g++) pool.push(c,c,c); });
+  return shuffle(pool);
+}
+
+/* ---------------- 自定义关卡：按「层级 + 螺丝数量 + 颜色种类数」动态随机配色 ----------------
+ * 目标（对应需求）：
+ *  1. 进游戏时完全重新随机配色（忽略编辑器每颗螺丝存的颜色），每局可不同。
+ *  2. 颜色种类数严格等于编辑器设置的 colorCount（clamp 到 [1, COLORS.length]）。
+ *  3. 每种颜色的螺丝数量为 3 的倍数（凑成整组），零头（total 非 3 倍数时）单独随机上色。
+ *  4. 优先消除大层级：按 layer 降序把螺丝「每 3 颗连续同色」分配，
+ *     使同层螺丝倾向成组；不足 3 颗时自然借相邻（次外）层补齐（因降序相邻即邻层）。
+ *  5. 保证开局至少能取走两组：最外层前 6 颗强制配成两种不同颜色（A×3, B×3），
+ *     这两色即初始两个需求槽的颜色（buildDemandQueue 已按层级降序，天然让它们最先进槽）。
+ *
+ * 入参 parts：buildCustomParts 产出的数组（每项含 layer、screwCount，顺序即布置顺序）。
+ * 返回：perPartColors —— 与 parts 对齐的二维数组，perPartColors[i][s] = COLORS 里的颜色对象。
+ */
+// 决定自定义关卡要用的颜色种类数：优先关卡 JSON 的 screwColorCount；
+// 缺失（旧存档）则回退为存档中实际出现的不同螺丝颜色数量；再兜底为 3。
+function resolveCustomColorCount(data, parts){
+  if (data && data.screwColorCount >= 1) return Math.max(1, Math.min(COLORS.length, Math.round(data.screwColorCount)));
+  const set = new Set();
+  (data && data.objects || []).forEach(o => (o.screws || []).forEach(s => { if (s.color) set.add(s.color); }));
+  if (set.size >= 1) return Math.min(COLORS.length, set.size);
+  return 3;
+}
+function makeCustomColorPlan(parts, colorCount){
+  const K = Math.max(1, Math.min(COLORS.length, Math.round(colorCount || 1)));
+  // 1) 收集所有螺丝槽位（记录所属 part 与在 part 内的序号、层级）
+  const slots = [];
+  parts.forEach((p, pi) => {
+    const layer = p.layer ?? 0;
+    for (let s = 0; s < p.screwCount; s++) slots.push({ pi, s, layer });
+  });
+  const total = slots.length;
+
+  // 输出容器
+  const perPartColors = parts.map(p => new Array(p.screwCount).fill(null));
+  if (total === 0) return perPartColors;
+
+  // 2) 选用 K 种颜色（随机取色板前 K 种）
+  const palette = shuffle([...COLORS]).slice(0, K);
+
+  // 3) 按层级降序排序（外层优先）；同层级随机打散，保证每局不同
+  slots.forEach(it => { it.rand = Math.random(); });
+  slots.sort((a, b) => (b.layer - a.layer) || (a.rand - b.rand));
+
+  // 4) 逐「3 颗一组」连续分配同一种颜色。颜色在调色板中轮转并带随机偏移，
+  //    使配色随机但每色天然成 3 的倍数（同层螺丝因排序相邻而倾向同组同色）。
+  const assign = new Array(total).fill(null);
+  const groupCount = Math.floor(total / 3);
+  // 预生成每组的颜色索引：先保证每种颜色至少出现一次（组数足够时），再随机填充
+  const groupColors = [];
+  for (let g = 0; g < groupCount; g++){
+    if (g < K) groupColors.push(g % K);                 // 前 K 组各用一种，确保 K 种都出现
+    else groupColors.push(Math.floor(Math.random() * K));
+  }
+  shuffleInPlaceExceptFirstTwo(groupColors);            // 打散，但稍后会强制处理开局两组
+
+  // 5) 保证开局两组：最外层(排序后最前面)的前 6 颗 = 两组不同色（A×3, B×3）
+  //    直接指定前两组用两种不同的调色板颜色。
+  if (groupCount >= 2 && K >= 2){
+    const a = 0, b = 1 % K === 0 ? 1 : 1;               // A=palette[0], B=palette[1]
+    groupColors[0] = 0;
+    groupColors[1] = 1;
+  } else if (groupCount >= 1){
+    groupColors[0] = 0;
+  }
+
+  for (let g = 0; g < groupCount; g++){
+    const colorIdx = groupColors[g];
+    for (let k = 0; k < 3; k++) assign[g*3 + k] = palette[colorIdx];
+  }
+  // 零头（total 非 3 倍数）：随机上色（可能进备用槽，属边界情况）
+  for (let i = groupCount*3; i < total; i++) assign[i] = palette[Math.floor(Math.random()*K)];
+
+  // 6) 把分配结果按 slot 顺序写回对应 part 的螺丝序号
+  slots.forEach((it, i) => { perPartColors[it.pi][it.s] = assign[i]; });
+  return perPartColors;
+}
+// 洗牌但尽量不动前两位（前两组开局用，稍后仍会被强制设定，这里只是减少偏置）
+function shuffleInPlaceExceptFirstTwo(arr){
+  for (let i = arr.length - 1; i > 2; i--){
+    const j = 2 + Math.floor(Math.random() * (i - 1));
+    const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+/* ---------------- 需求队列生成（优先按「层级 + 可消除颜色」） ----------------
+ * 设计目标：让需求槽里的颜色尽量与「当前可优先取下的螺丝」匹配，避免需求槽里
+ * 全是深埋层级的颜色、而外层可取的螺丝却无处安放被迫挤占备用槽。
+ *
+ * 规则：
+ * 1. 按颜色分组，记录每颗螺丝所在层级（layer 越大越外/越上，越先被取下）。
+ * 2. 每种颜色内，把螺丝按层级降序排序（外层优先），每 3 颗凑成一个「需求三连」。
+ * 3. 每个三连的「解锁层级」= 其 3 颗中最深（layer 最小）那颗——因为要凑齐 3 颗，
+ *    取决于最难拿到的一颗，这决定了该三连最早能在何时被满足。
+ * 4. 全局把所有三连按「解锁层级」降序排队：外层（高 layer）能凑齐的颜色优先进入
+ *    需求槽；同一解锁层级内随机打散，避免每局完全一致。
+ *
+ * 入参 screwPlan：[{ color, layer }, ...]（每颗螺丝一项）
+ */
+function buildDemandQueue(screwPlan){
+  const byColor = {};   // name -> { color, layers:[] }
+  screwPlan.forEach(it => {
+    const e = byColor[it.color.name] || (byColor[it.color.name] = { color: it.color, layers: [] });
+    e.layers.push(it.layer ?? 0);
+  });
+
+  const triples = [];   // { color, unlockLayer, rand }
+  Object.keys(byColor).forEach(name => {
+    const e = byColor[name];
+    e.layers.sort((a, b) => b - a);                  // 层级降序：外层在前
+    const groups = Math.floor(e.layers.length / 3);
+    for (let t = 0; t < groups; t++){
+      const unlockLayer = e.layers[t * 3 + 2];       // 该三连中最深一颗的层级
+      triples.push({ color: e.color, unlockLayer, rand: Math.random() });
+    }
+  });
+
+  // 主排序：解锁层级降序（外层颜色优先）；次排序：同层级随机
+  triples.sort((a, b) => (b.unlockLayer - a.unlockLayer) || (a.rand - b.rand));
+
+  // 保证初始可见的 DEMAND_SHOW 个需求槽尽量是「不同颜色」：
+  // 若前两个三连同色，则从后面找一个不同色的三连提到第 2 位，
+  // 这样开局两个需求槽对应两种颜色，配合最外层两组同色螺丝即可各取一组。
+  if (triples.length >= 2 && triples[0].color.name === triples[1].color.name){
+    const j = triples.findIndex((t, idx) => idx >= 2 && t.color.name !== triples[0].color.name);
+    if (j > 1){ const picked = triples.splice(j, 1)[0]; triples.splice(1, 0, picked); }
+  }
+  return triples.map(t => ({ color: t.color, filled: 0, done: false }));
+}
+
+/* =========================================================
+ * 保证可行的配色 / 需求槽分配（自定义关卡）
+ * ---------------------------------------------------------
+ * 需求：游玩时的螺丝配色与需求槽分配「必须保证至少一个可行解」。
+ * 做法：先在真实几何上求出一条【可行拆解顺序】——反复取「射线方向存在可拧视角
+ * （不被未掉落体素遮挡）且层级优先」的螺丝，直到取完；然后：
+ *   · 沿该顺序【每 3 颗连续同色】分配颜色（颜色种类受 colorCount 约束，循环取色）；
+ *   · 需求队列严格按该顺序的颜色三连排列。
+ * 于是「玩家可拆顺序 = 需求出现顺序 = 配色成组顺序」三者对齐，照此拆必然通关，
+ * 且 5 颗容错完全用不到（备用槽始终为空）。若求不出完整顺序（结构死局）则返回 null。
+ *
+ * parts：buildCustomParts 产物（含 mesh/holes/layer/groupId/screwCount）。
+ * 返回 { perPartColors, demandQueue } 或 null（无可行解）。
+ * ========================================================= */
+const _solveRaycaster = new THREE.Raycaster();
+// 与 sculpt.js sampleDirsAroundNormal 完全一致：更密的多圈采样（到 85°），覆盖更多可见视角
+function _sampleDirsAroundNormal(n){
+  const dirs = [n.clone()];
+  let ref = Math.abs(n.y) < 0.9 ? new THREE.Vector3(0,1,0) : new THREE.Vector3(1,0,0);
+  const u = new THREE.Vector3().crossVectors(n, ref).normalize();
+  const v = new THREE.Vector3().crossVectors(n, u).normalize();
+  const rings = [20, 40, 55, 70, 85], perRing = 12;
+  rings.forEach(deg => {
+    const a = THREE.MathUtils.degToRad(deg), cs = Math.cos(a), sn = Math.sin(a);
+    for (let k = 0; k < perRing; k++){
+      const phi = (k/perRing)*Math.PI*2 + (deg*0.017);
+      dirs.push(n.clone().multiplyScalar(cs)
+        .add(u.clone().multiplyScalar(sn*Math.cos(phi)))
+        .add(v.clone().multiplyScalar(sn*Math.sin(phi))).normalize());
+    }
+  });
+  return dirs;
+}
+// 螺丝（世界坐标）在给定「已掉落 part 集合」下是否可拧：存在任一朝外方向不被未掉落体素挡住。
+// 与 sculpt.js screwReachable 完全一致：起点沿法线抬高约 1 个体素越过紧邻结构，且忽略近距离命中。
+function _screwReachableWorld(sw, voxelMeshesByPart, droppedParts){
+  const targets = [];
+  voxelMeshesByPart.forEach((arr, pi) => { if (!droppedParts.has(pi)) for (const m of arr) targets.push(m); });
+  if (!targets.length) return true;
+  const headHalf = sw.headHalf || 0.125;
+  const vs = sw.voxelSize || 0.5;
+  const lift = headHalf + Math.max(0.12, vs * 0.9);
+  const NEAR_IGNORE = Math.max(0.14, vs * 1.1);
+  const base = sw.worldPos.clone().add(sw.worldNormal.clone().multiplyScalar(lift));
+  const dirs = _sampleDirsAroundNormal(sw.worldNormal);
+  for (const dir of dirs){
+    _solveRaycaster.set(base.clone(), dir);
+    _solveRaycaster.far = 500;
+    const hits = _solveRaycaster.intersectObjects(targets, false);
+    let blocked = false;
+    for (const h of hits){ if (h.distance > NEAR_IGNORE){ blocked = true; break; } }
+    if (!blocked) return true;
+  }
+  return false;
+}
+
+function makeGuaranteedPlan(parts, colorCount){
+  const K = Math.max(1, Math.min(COLORS.length, Math.round(colorCount || 1)));
+
+  // 1) 收集每个 part 的体素 mesh（更新世界矩阵后可参与射线检测，无需加入 gameGroup）
+  const voxelMeshesByPart = new Map();
+  parts.forEach((p, pi) => {
+    p.mesh.updateMatrixWorld(true);
+    const arr = [];
+    p.mesh.traverse(o => { if (o.isMesh) arr.push(o); });
+    voxelMeshesByPart.set(pi, arr);
+  });
+
+  // 2) 收集所有螺丝的世界坐标信息
+  const screws = [];
+  const objsArr = (state.customData && state.customData.objects) || [];
+  parts.forEach((p, pi) => {
+    // part 与 customData.objects 一一对应（buildCustomParts 按顺序生成）
+    const srcObj = objsArr[pi];
+    const partVoxelSize = (srcObj && srcObj.voxelSize > 0) ? srcObj.voxelSize : VOX;
+    for (let s = 0; s < p.screwCount; s++){
+      const hole = p.holes[s % p.holes.length];
+      const localPos = hole.pos.clone();
+      const localNormal = hole.normal.clone().normalize();
+      const headHalfHeight = 0.045 * (hole.scale ?? p.screwScale ?? 1);
+      const lift = hole.lift ?? p.screwLift ?? 0.05;
+      // 与 attachScrew 一致：螺丝头中心 = localPos + normal*(headHalfHeight + lift)
+      const headLocal = localPos.clone().add(localNormal.clone().multiplyScalar(headHalfHeight + lift));
+      const worldPos = headLocal.applyMatrix4(p.mesh.matrixWorld);
+      const nrmMat = new THREE.Matrix3().getNormalMatrix(p.mesh.matrixWorld);
+      const worldNormal = localNormal.clone().applyMatrix3(nrmMat).normalize();
+      screws.push({
+        partIndex: pi, screwIndex: s, layer: p.layer ?? 0,
+        groupId: p.groupId || null,
+        worldPos, worldNormal, headHalf: CUSTOM_SCREW_DIAMETER * 0.5,
+        voxelSize: partVoxelSize,
+        taken: false,
+      });
+    }
+  });
+  const N = screws.length;
+  if (N === 0) return null;
+
+  // 3) 求可行拆解顺序：反复取「可达且层级最高」的螺丝
+  const droppedParts = new Set();
+  const partScrewCount = parts.map(p => p.screwCount);
+  const partTaken = parts.map(() => 0);
+  // part -> 同组的 part 索引
+  const groupOf = (pi) => {
+    const gid = parts[pi].groupId;
+    if (!gid) return [pi];
+    const arr = [];
+    parts.forEach((p, i) => { if (p.groupId === gid) arr.push(i); });
+    return arr;
+  };
+  const updateDrops = () => {
+    parts.forEach((p, pi) => {
+      if (droppedParts.has(pi)) return;
+      const members = groupOf(pi);
+      const hadScrews = members.some(mi => partScrewCount[mi] > 0);
+      const allEmpty = members.every(mi => partTaken[mi] >= partScrewCount[mi]);
+      if (hadScrews && allEmpty) members.forEach(mi => droppedParts.add(mi));
+    });
+  };
+
+  const order = [];
+  let guard = N * 4 + 20;
+  // 求解时间预算：射线检测复杂度为 O(轮次 × 螺丝 × 方向 × 体素mesh)，实心/大体量模型可能达数亿次
+  // 而这段在 animate() 之前同步执行，卡死会导致整页白屏。超预算则返回 null，由上层回退到
+  // makeCustomColorPlan（不保证可行但绝不卡死），保证试玩页面一定能渲染出来。
+  const _now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  const _deadline = _now() + 2500;
+  while (order.length < N && guard-- > 0){
+    updateDrops();
+    // 候选：未取且所属 part 未掉落，按层级从高到低排序，取「第一个可达」的即停，
+    // 避免每轮对所有螺丝都做射线检测（filter 不短路会成倍放大开销）。
+    const candidates = screws.filter(s => !s.taken && !droppedParts.has(s.partIndex));
+    candidates.sort((a, b) => b.layer - a.layer);
+    let pick = null;
+    for (const s of candidates){
+      if (_now() > _deadline) return null;    // 超时 → 交给上层回退，绝不卡死主线程
+      if (_screwReachableWorld(s, voxelMeshesByPart, droppedParts)){ pick = s; break; }
+    }
+    if (!pick) break;                          // 无可达螺丝：结构无可行解
+    pick.taken = true;
+    partTaken[pick.partIndex]++;
+    order.push(pick);
+  }
+  if (order.length < N) return null;          // 无法取完 → 无可行解
+
+  // 4) 沿可行顺序每 3 颗连续同色分配颜色（颜色循环，保证每 3 颗一组同色）
+  const palette = shuffle([...COLORS]).slice(0, K);
+  const perPartColors = parts.map(p => new Array(p.screwCount).fill(null));
+  const orderColors = [];   // 与 order 对齐，用于生成需求队列
+  order.forEach((sw, idx) => {
+    const group = Math.floor(idx / 3);
+    const color = palette[group % K];
+    perPartColors[sw.partIndex][sw.screwIndex] = color;
+    orderColors.push(color);
+  });
+  // 处理零头（N 非 3 倍数）：末尾不足 3 颗的用最后一组颜色（游戏要求总数为 3 倍数，通常不会走到）
+  for (let i = Math.floor(N/3)*3; i < N; i++){
+    const sw = order[i];
+    if (!perPartColors[sw.partIndex][sw.screwIndex]) perPartColors[sw.partIndex][sw.screwIndex] = palette[0];
+  }
+
+  // 5) 需求队列：严格按可行顺序的「每 3 颗颜色」成三连排列（= 玩家可拆顺序）
+  const demandQueue = [];
+  for (let g = 0; g * 3 < N; g++){
+    const color = orderColors[g * 3];
+    if (color) demandQueue.push({ color, filled: 0, done: false });
+  }
+
+  return { perPartColors, demandQueue };
+}
+
+/* 生成一次「整体颜色置换」映射（双射）：把关卡固化解里用到的每种颜色，
+ * 一一映射到 8 色中随机选取的另一种颜色（如 红→黄、黄→灰）。
+ * 由于是双射且对所有螺丝与需求槽统一应用，每 3 颗同色的分组关系完全不变，
+ * 固化的可行解依然成立——只是整局“换了一套配色”。
+ * 返回 { 原色name: 新色name }。*/
+function makeColorPermutation(){
+  const data = state.customData;
+  const used = new Set();
+  if (data && data.solution && Array.isArray(data.solution.demand)) data.solution.demand.forEach(c => used.add(c));
+  // 也并入关卡里实际螺丝用到的颜色，确保覆盖全（防止 demand 与螺丝色不完全一致）
+  (data && data.objects || []).forEach(o => (o.screws || []).forEach(s => { if (s.color) used.add(s.color); }));
+  const usedArr = Array.from(used);
+  if (!usedArr.length) return {};
+  let target = shuffle(COLORS.map(c => c.name)).slice(0, usedArr.length);
+  // 避免恒等映射（种类>1 时确保确实换色）
+  const identity = usedArr.every((c, i) => c === target[i]);
+  if (identity && target.length > 1) target = target.slice(1).concat(target[0]);
+  const map = {};
+  usedArr.forEach((c, i) => { map[c] = target[i] || c; });
+  return map;
+}
+
+function clearCurrentLevel(){
+  scene.remove(gameGroup);
+  gameGroup = new THREE.Group();
+  scene.add(gameGroup);
+  Object.assign(state, { screws:[], plates:[], demandQueue:[], demandSlots:[], demandCursor:0, demandSlotFX:{}, spares:[], totalScrews:0, remain:0, over:false, busy:false, maxLayer:0, activeLayer:0 });
+}
+
+function buildLevel(levelId = 1) {
+  clearCurrentLevel();
+  state.currentLevel = levelId;
+
+  let parts;
+  const isCustom = levelId === 'custom';
+  if (isCustom) {
+    parts = buildCustomParts(state.customData);
+  } else {
+    parts = levelId === 2 ? buildBurgerParts() : buildCornParts();
+  }
+  const total = parts.reduce((s,p)=>s+p.screwCount, 0);
+  state.totalScrews = total;
+  state.remain = total;
+
+  // 颜色分配：
+  //  · 自定义关卡：优先使用编辑器【固化的可行解】——每颗螺丝的颜色直接取自关卡数据
+  //    （part.fixedColors，即编辑器验证通过后写回的颜色），需求槽顺序取自 solution.demand。
+  //    游戏不再运行时随机分配颜色；只做「整体颜色置换」的随机（一一映射换色，位置/分组不变，
+  //    可行解依然成立）。
+  //    若关卡没有固化解（旧存档 / 未验证）→ 回退到运行时求解 makeGuaranteedPlan。
+  //  · 内置关卡：沿用原随机池。
+  let colorPool = null;
+  let customColors = null;   // 自定义关卡：perPartColors[partIndex][screwIndex] = COLORS 对象
+  let guaranteedQueue = null; // 自定义关卡：保证可行的需求队列（若成功求解 / 固化）
+  if (isCustom) {
+    const cc = resolveCustomColorCount(state.customData, parts);
+    const manual = state.customData && state.customData.screwMode === 'manual';
+    const frozen = state.customData && state.customData.solution;
+    if (manual){
+      // ---- 手动布置模式：颜色严格取自每颗螺丝自身（fixedColors），绝不换色/重排 ----
+      // 保证「试玩所见 = 编辑器所见」。需求队列由下方 buildDemandQueue 基于实际颜色生成。
+      customColors = parts.map(p => (p.fixedColors || []).map(c => {
+        const name = (c && c.name) ? c.name : (c || 'red');
+        return COLORS.find(x => x.name === name) || COLORS[0];
+      }));
+      guaranteedQueue = null;
+    } else if (frozen && Array.isArray(frozen.demand) && frozen.demand.length){
+      // ---- 使用固化可行解 ----
+      // 1) 生成一次「整体颜色置换」映射（双射换色），保持可行解不变
+      const colorMap = makeColorPermutation();
+      // 2) 每颗螺丝颜色 = 固化颜色经置换（part.fixedColors 来自关卡数据里每颗螺丝的 color）
+      customColors = parts.map(p => (p.fixedColors || []).map(c => {
+        const name = c && c.name ? c.name : (c || 'red');
+        const mapped = colorMap[name] || name;
+        return COLORS.find(x => x.name === mapped) || COLORS[0];
+      }));
+      // 3) 需求槽顺序 = 固化需求序列经同一置换
+      guaranteedQueue = frozen.demand.map(name => {
+        const mapped = colorMap[name] || name;
+        return { color: COLORS.find(x => x.name === mapped) || COLORS[0], filled: 0, done: false };
+      });
+    } else {
+      // ---- 无固化解：运行时求「保证可行」的配色 + 需求队列 ----
+      const plan = makeGuaranteedPlan(parts, cc);
+      if (plan) {
+        customColors = plan.perPartColors;
+        guaranteedQueue = plan.demandQueue;
+      } else {
+        // 求不出可行顺序（关卡结构本身死局）→ 回退旧随机逻辑（此时本就无解，游戏也会体现）
+        customColors = makeCustomColorPlan(parts, cc);
+      }
+    }
+  } else {
+    colorPool = makeColorPool(total);
+  }
+
+  // 计算最高层（layer 越大越外/越上，越先被取下）
+  state.maxLayer = parts.reduce((m,p)=>Math.max(m, p.layer ?? 0), 0);
+  state.activeLayer = state.maxLayer; // 从最外/最上层开始
+
+  // 预先确定每颗螺丝的颜色与层级（与下方布置循环顺序完全一致）
+  const screwPlan = [];   // 扁平：[{ color, layer }, ...]
+  let ci = 0;
+  parts.forEach((part, pi) => {
+    const layer = part.layer ?? 0;
+    for (let s = 0; s < part.screwCount; s++) {
+      const color = isCustom ? customColors[pi][s] : colorPool[ci++];
+      screwPlan.push({ color, layer });
+    }
+  });
+
+  // 需求队列：
+  //  · 自定义关卡且成功求出可行方案 → 直接用「保证可行」的需求顺序（与可拆顺序对齐）。
+  //  · 否则按旧逻辑「层级 + 可消除颜色」生成。
+  state.demandQueue = guaranteedQueue || buildDemandQueue(screwPlan);
+  initDemandSlots();
+
+  let planIdx = 0;
+  parts.forEach(part => {
+    const plateMesh = part.mesh;
+    const layer = part.layer ?? 0;
+    plateMesh.userData = Object.assign(plateMesh.userData || {}, { type:'plate', layer });
+    gameGroup.add(plateMesh);
+    const plate = { mesh: plateMesh, screws: new Set(), kind: part.kind, layer, groupId: part.groupId || null };
+    state.plates.push(plate);
+    for (let s = 0; s < part.screwCount; s++) {
+      const color = screwPlan[planIdx++].color;
+      const slot = part.holes[s % part.holes.length];
+      const sScale = slot.scale ?? part.screwScale ?? 1;
+      const sLift = slot.lift ?? part.screwLift ?? 0.05;
+      attachScrew(plate, color, slot.pos, slot.normal, sScale, sLift);
+    }
+  });
+
+  gameGroup.position.y = -1.0;
+
+  // 自定义关卡：自动居中物体并适配相机距离
+  if (isCustom) {
+    // 取景/居中只按「体素模型」的包围盒，排除螺丝（螺丝向外突出、数量与分布不定，
+    // 螺丝很少时会把整体包围盒拉偏/撑小，导致进场视角跑偏或贴脸——这正是“螺丝太少
+    // 时视角出错”的根因）。voxelModelBox 遍历时跳过 type==='screw' 的子树。
+    const box = voxelModelBox(gameGroup);
+    if (!box.isEmpty()) {
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      gameGroup.children.forEach(ch => { ch.position.x -= center.x; ch.position.z -= center.z; });
+      gameGroup.position.y = -1.0 - (center.y - gameGroup.position.y);
+      const maxDim = Math.max(size.x, size.y, size.z);
+      applyViewRangeForScale(1);   // 先按 1× 设默认可视边界（无模特/隐藏模特时即最终值）
+      // 基准取景距离（人模缩放为 1× 时的距离），仅由体素模型尺寸决定；
+      // 钳制到滚轮范围内(zoomMin~zoomMax)，保证初始距离与滚轮上下限一致（滚动不突变）。
+      const baseRadius = Math.max(orbit.zoomMin, Math.min(orbit.zoomMax, maxDim * 2.4));
+      orbit.radius = baseRadius;
+      orbit.target.set(0, 0, 0);
+      updateCamera();
+
+      // 编辑器保存的人形模特变换（位置/旋转/缩放/显隐）
+      const mx = (state.customData && state.customData.mannequin) || {};
+      const mScale = (mx.scale > 0) ? mx.scale : 1;
+      const mVisible = false;   // 强制默认关闭：试玩界面一律不显示人形模特（忽略存档）
+
+      // 人形模特：与编辑器中保持一致的相对位置/朝向/缩放
+      // （编辑器原点 = 模特底座；这里叠加体素居中偏移，使二者相对关系与编辑器一致）
+      const m = getMannequin();
+      if (m && mVisible) {
+        m.visible = true;
+        // 应用编辑器缩放；人头会随之放大 mScale 倍，稍后用相机拉远抵消其视觉大小
+        m.scale.setScalar(mScale);
+        m.rotation.y = THREE.MathUtils.degToRad(mx.rotY || 0);
+        m.position.set(
+          -center.x + (mx.x || 0),
+          gameGroup.position.y + (mx.y || 0),
+          -center.z + (mx.z || 0)
+        );
+        m.userData.setOpacity(1);
+
+        // 关键：人模放大 mScale 倍后，为保持人头在屏幕上的视觉比例与编辑器（=1× 视角）
+        // 一致，需把相机整体拉远 mScale 倍（近似线性透视：视觉大小 ∝ 物体尺寸 / 距离）。
+        orbit.radius = baseRadius * mScale;
+        // 可视边界随人头缩放同步放大 mScale 倍（雾 near/far、滚轮上下限），
+        // 否则拉远后模型会被雾吞没 / 被滚轮上限钳制，导致进场首帧看不到东西。
+        applyViewRangeForScale(mScale);
+        updateCamera();
+
+        // 缓存人体包围球与初始取景缩放半径，供「按缩放渐隐」使用
+        m.updateMatrixWorld(true);
+        const mbox = new THREE.Box3().setFromObject(m);
+        const mc = mbox.getCenter(new THREE.Vector3());
+        const msz = mbox.getSize(new THREE.Vector3());
+        m.userData.viewSphere = { center: mc, radius: Math.max(msz.x, msz.y, msz.z) * 0.5 };
+        m.userData.fitRadius = orbit.radius;   // 旋转不变的初始缩放距离
+
+        // 屏幕中心 = 体素整体模型中心(80%) + 头部中心(20%)：
+        // 「整体模型」只指编辑的体素模型(不含螺丝、不含人体)。
+        gameGroup.updateMatrixWorld(true);
+        const voxelCenter = voxelModelBox(gameGroup).getCenter(new THREE.Vector3());
+        const headSphere = m.userData.getHeadWorldSphere ? m.userData.getHeadWorldSphere() : null;
+        const headC = headSphere ? headSphere.center : voxelCenter;
+        orbit.target.set(
+          voxelCenter.x * 0.8 + headC.x * 0.2,
+          voxelCenter.y * 0.8 + headC.y * 0.2,
+          voxelCenter.z * 0.8 + headC.z * 0.2
+        );
+        updateCamera();
+      } else {
+        hideMannequin();
+      }
+    } else {
+      hideMannequin();
+    }
+  } else {
+    hideMannequin();   // 内置关卡（玉米/汉堡）不展示模特，玩法不变
+    applyViewRangeForScale(1);   // 恢复默认雾/缩放边界（无人模缩放）
+  }
+
+  refreshLayerVisual();
+  updateHUD();
+  renderDemand();
+  renderSpare();
+  hideOverlay();
+  setInLevel(true);
+}
+
+// 已取消层级锁定：保留空实现以兼容调用点，不再压暗任何物体。
+function refreshLayerVisual(){ state.activeLayer = 0; }
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+function findScrewRoot(obj){ let o = obj; while(o){ if (o.userData && o.userData.type === 'screw') return o; o = o.parent; } return null; }
+function detachScrewToGroup(screw){ if (screw.parent === gameGroup) return; const wp = new THREE.Vector3(); screw.getWorldPosition(wp); const wq = new THREE.Quaternion(); screw.getWorldQuaternion(wq); const ws = new THREE.Vector3(); screw.getWorldScale(ws); screw.parent.remove(screw); gameGroup.add(screw); gameGroup.worldToLocal(wp); screw.position.copy(wp); screw.quaternion.copy(wq); /* 保持世界尺寸不变：换父级(plate→gameGroup，两者缩放可能不同)后，用世界缩放除以新父级世界缩放得到应有的局部缩放，避免螺丝在被取下瞬间变大/变小 */ const gs = new THREE.Vector3(); gameGroup.getWorldScale(gs); screw.scale.set(ws.x/(gs.x||1), ws.y/(gs.y||1), ws.z/(gs.z||1)); }
+function setOpacity(obj, op){ obj.traverse(o => { if (o.material) { const mats = Array.isArray(o.material) ? o.material : [o.material]; mats.forEach(m => { m.transparent = true; m.opacity = op; }); } }); }
+function dropAnim(mesh){ const start = performance.now(), startY = mesh.position.y, rotSpin = (Math.random()-0.5)*2; function step(now){ const t=(now-start)/700; if(t>=1){gameGroup.remove(mesh);return;} mesh.position.y=startY-t*t*10; mesh.rotation.z+=rotSpin*0.04; mesh.rotation.x+=0.03; setOpacity(mesh,1-t); requestAnimationFrame(step);} requestAnimationFrame(step); }
+// 绑定组：整组共命运——同组所有物件的螺丝全部取光后，整组一起掉落（任一还剩螺丝则都不掉）。
+// 未绑定的物件保持原逻辑：自身螺丝取光即掉落。
+function maybeDropPlate(plate){
+  if (!plate.groupId){
+    if (plate.dropped) return;
+    if (plate.screws.size === 0) { plate.dropped = true; dropAnim(plate.mesh); }
+    return;
+  }
+  const members = state.plates.filter(p => p.groupId === plate.groupId);
+  const allEmpty = members.every(p => p.screws.size === 0);
+  if (!allEmpty) return;
+  members.forEach(p => { if (!p.dropped) { p.dropped = true; dropAnim(p.mesh); } });
+}
+function removeScrewFromGame(screw){ screw.userData.taken = true; if (screw.userData.plate) { screw.userData.plate.screws.delete(screw); maybeDropPlate(screw.userData.plate); } gameGroup.remove(screw); const idx = state.screws.indexOf(screw); if (idx>=0) state.screws.splice(idx,1); refreshLayerVisual(); }
+
+function refillDemandSlot(slotIndex){
+  state.demandSlots[slotIndex] = state.demandCursor < state.demandQueue.length ? state.demandQueue[state.demandCursor++] : null;
+}
+function initDemandSlots(){
+  state.demandCursor = 0;
+  state.demandSlotFX = {};
+  state.demandSlots = new Array(DEMAND_SHOW).fill(null);
+  for (let i = 0; i < DEMAND_SHOW; i++) refillDemandSlot(i);
+}
+
+const SLOT_FULL_HOLD_MS = 260;   // 满槽后先停留，给反馈
+const SLOT_ENTER_MS = 340;       // 新槽淡入/弹入
+function markDemandSlotFX(slotIndex, finishedSlot){
+  const now = performance.now();
+  state.demandSlotFX[slotIndex] = {
+    oldView: { color: finishedSlot.color, filled: 3 },
+    holdUntil: now + SLOT_FULL_HOLD_MS,
+    enterUntil: now + SLOT_FULL_HOLD_MS + SLOT_ENTER_MS,
+  };
+  setTimeout(() => renderDemand(), SLOT_FULL_HOLD_MS + 18);
+  setTimeout(() => renderDemand(), SLOT_FULL_HOLD_MS + SLOT_ENTER_MS + 24);
+}
+
+function completeDemandSlot(slotIndex){
+  const slot = state.demandSlots[slotIndex];
+  if (!slot) return;
+  slot.done = true;
+  refillDemandSlot(slotIndex);        // 后台逻辑先切换
+  markDemandSlotFX(slotIndex, slot);  // 前台视觉延迟切换
+}
+function getVisibleDemands(){
+  return state.demandSlots.map((slot, slotIndex) => slot ? { slot, slotIndex } : null).filter(Boolean);
+}
+// 选择要填入的同色需求槽：当有多个同色槽都能填时，优先填「已填数量最多」的那个
+// （最接近凑齐 3 个，能尽快消除一个槽）；数量相同则优先靠前（索引小）的槽。
+// 修复：避免同色的两个槽各差一点、迟迟凑不满的问题。
+function pickDemandTarget(colorName){
+  const cands = getVisibleDemands().filter(d => d.slot.color.name === colorName && d.slot.filled < 3);
+  if (!cands.length) return null;
+  cands.sort((a, b) => (b.slot.filled - a.slot.filled) || (a.slotIndex - b.slotIndex));
+  return cands[0];
+}
+function screenToWorld(nx, ny){ const ndc = new THREE.Vector3(nx*2-1, -(ny*2-1), 0.5); ndc.unproject(camera); const dir = ndc.sub(camera.position).normalize(); return camera.position.clone().add(dir.multiplyScalar(12)).sub(gameGroup.position); }
+function flyTo(screw, targetWorld, cb){ const start=screw.position.clone(), baseScale=screw.scale.clone(), startTime=performance.now(), dur=360; function step(now){ let t=(now-startTime)/dur; if(t>=1)t=1; const ease=1-Math.pow(1-t,3); screw.position.lerpVectors(start,targetWorld,ease); screw.position.y += Math.sin(t*Math.PI)*1.2; const k=1-0.5*t; screw.scale.set(baseScale.x*k, baseScale.y*k, baseScale.z*k); screw.rotation.y += 0.3; if(t<1)requestAnimationFrame(step); else cb(); } requestAnimationFrame(step); }
+function getDemandTargetWorld(){ return screenToWorld(0.5, 0.16); }
+function getSpareTargetWorld(){ return screenToWorld(0.5, 0.285); }
+function animateScrewToSlot(screw, done){ state.busy = true; flyTo(screw, getDemandTargetWorld(), () => { state.busy=false; done(); }); }
+function animateScrewToSpare(screw, done){ state.busy = true; flyTo(screw, getSpareTargetWorld(), () => { state.busy=false; done(); }); }
+
+function tryFlushSpares(){
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let i = 0; i < state.spares.length; i++) {
+      const cname = state.spares[i].name;
+      // 优先回填到「已填最多」的同色槽（见 pickDemandTarget）
+      const t = pickDemandTarget(cname);
+      if (t) {
+        state.spares.splice(i,1);
+        t.slot.filled++;
+        if (t.slot.filled >= 3) completeDemandSlot(t.slotIndex);
+        changed = true;
+        break;
+      }
+    }
+  }
+  updateHUD();
+  renderSpare();
+  renderDemand();
+}
+
+function takeScrew(screw){
+  const color = screw.userData.color;
+  detachScrewToGroup(screw);
+  // 优先填入「已填最多」的同色需求槽（见 pickDemandTarget），避免同色两槽各差一点
+  let target = pickDemandTarget(color.name);
+  if (target) {
+    animateScrewToSlot(screw, () => {
+      target.slot.filled++;
+      removeScrewFromGame(screw);
+      state.remain--;
+      if (target.slot.filled >= 3) completeDemandSlot(target.slotIndex);
+      tryFlushSpares();
+      updateHUD();
+      renderDemand();
+      checkWin();
+    });
+  } else {
+    if (state.spares.length >= SPARE_MAX) { gameOver(false); return; }
+    animateScrewToSpare(screw, () => {
+      state.spares.push(color);
+      removeScrewFromGame(screw);
+      state.remain--;
+      updateHUD();
+      renderSpare();
+      tryFlushSpares();
+      if (state.spares.length >= SPARE_MAX) gameOver(false); else checkWin();
+    });
+  }
+}
+
+function findPlateRoot(obj){ let o = obj; while(o){ if (o.userData && o.userData.type === 'plate') return o; o = o.parent; } return null; }
+
+function tryPickAt(clientX, clientY){
+  if (state.busy || state.over) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const cx = clientX - rect.left, cy = clientY - rect.top;
+  pointer.x = (cx / rect.width) * 2 - 1;
+  pointer.y = -(cy / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const intersects = raycaster.intersectObjects(gameGroup.children, true);
+  if (!intersects.length) return;
+
+  // 找到射线命中的第一个螺丝（按距离从近到远）
+  let screwHitIndex = -1, screw = null;
+  for (let i=0;i<intersects.length;i++){
+    const s = findScrewRoot(intersects[i].object);
+    if (s && !s.userData.taken) { screw = s; screwHitIndex = i; break; }
+  }
+  if (!screw) return;
+
+  // 遮挡判断：鼠标不能穿透物体点到它背后的螺丝。
+  // 只要这颗螺丝之前（更近处）存在任何“体素物体”命中（无论是否透明，玻璃等半透明体素同样阻挡），
+  // 就视为被挡住，不可拾取，仅给抖动反馈。
+  let occluded = false;
+  for (let i = 0; i < screwHitIndex; i++){
+    const o = intersects[i].object;
+    if (findScrewRoot(o)) continue;                 // 前面命中的是别的螺丝部件，不算“物体遮挡”
+    occluded = true; break;                          // 命中任意体素（含透明）即算遮挡
+  }
+  if (occluded) { shakeMesh(screw); return; }        // 被前面物体挡住 → 不允许穿透拾取
+
+  takeScrew(screw);
+}
+
+// 螺丝抖动反馈（被遮挡时）
+function shakeMesh(mesh){
+  if (mesh.userData._shaking) return;
+  mesh.userData._shaking = true;
+  const baseX = mesh.position.x, baseZ = mesh.position.z;
+  const start = performance.now();
+  function step(now){
+    const t = (now - start) / 280;
+    if (t >= 1){ mesh.position.x = baseX; mesh.position.z = baseZ; mesh.userData._shaking = false; return; }
+    const amp = Math.sin(t * Math.PI * 4) * 0.06 * (1 - t);
+    mesh.position.x = baseX + amp; mesh.position.z = baseZ + amp;
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function checkWin(){ if (state.remain <= 0) gameOver(true); }
+function gameOver(win){ if (state.over) return; state.over = true; showOverlay(win); }
+
+const elTopbar = document.getElementById('topbar');
+const elExitLevel = document.getElementById('exit-level');
+const elLevelSelect = document.getElementById('level-select');
+const elSpareZone = document.getElementById('spare-zone');
+const elRemain = document.getElementById('remain');
+const elRemainTotal = document.getElementById('remain-total');
+const elProgress = document.getElementById('progress');
+const elDemandZone = document.getElementById('demand-zone');
+const elSpareRow = document.getElementById('spare-row');
+const overlay = document.getElementById('overlay');
+
+function setInLevel(inLevel){
+  elTopbar.style.display = inLevel ? 'flex' : 'none';
+  elDemandZone.style.display = inLevel ? 'flex' : 'none';
+  elSpareZone.style.display = inLevel ? 'flex' : 'none';
+  elExitLevel.style.display = inLevel ? 'block' : 'none';
+  elLevelSelect.style.display = inLevel ? 'none' : 'flex';
+}
+
+function showLevelSelect(){
+  clearCurrentLevel();
+  hideMannequin();
+  state.currentLevel = null;
+  hideOverlay();
+  updateHUD();
+  renderDemand();
+  renderSpare();
+  setInLevel(false);
+  refreshCustomBtn();
+}
+
+const CUSTOM_LEVEL_KEY = 'screw_custom_level';          // 兼容旧单关卡存储
+const CUSTOM_LEVELS_KEY = 'screw_custom_levels_v1';     // 新：自定义关卡库
+
+function loadCustomLevels(){
+  try {
+    const raw = localStorage.getItem(CUSTOM_LEVELS_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch(e){ return []; }
+}
+function saveCustomLevels(list){
+  try { localStorage.setItem(CUSTOM_LEVELS_KEY, JSON.stringify(list)); } catch(e){}
+}
+function loadLegacyCustomData(){
+  try { const raw = localStorage.getItem(CUSTOM_LEVEL_KEY); return raw ? JSON.parse(raw) : null; }
+  catch(e){ return null; }
+}
+function getCustomEntryById(id){ return loadCustomLevels().find(x => x.id === id) || null; }
+
+function loadCustomData(customId = null){
+  const list = loadCustomLevels().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+  if (customId) {
+    const byId = list.find(x => x.id === customId);
+    if (byId && byId.data) return byId.data;
+  }
+  if (list.length && list[0].data) return list[0].data;   // 默认取最近更新
+  return loadLegacyCustomData();                            // 兜底兼容旧数据
+}
+
+function fmtCustomTime(ts){
+  const d = new Date(ts || Date.now());
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function renderCustomLibrary(){
+  const box = document.getElementById('custom-lib-list');
+  if (!box) return;
+  const list = loadCustomLevels();
+  box.innerHTML = '';
+  if (!list.length) {
+    box.innerHTML = '<div style="color:#9fb0d2;font-size:12px;padding:6px 2px;">暂无，去雕塑编辑器点「快速保存」即可加入</div>';
+    return;
+  }
+  list.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'custom-lib-item';
+
+    const left = document.createElement('div');
+    const name = document.createElement('div');
+    name.className = 'custom-lib-name';
+    name.textContent = item.name || '未命名关卡';
+    const time = document.createElement('div');
+    time.className = 'custom-lib-time';
+    time.textContent = `更新于 ${fmtCustomTime(item.updatedAt)}`;
+    left.append(name, time);
+
+    const ops = document.createElement('div');
+    ops.className = 'custom-lib-ops';
+
+    const bPlay = document.createElement('button');
+    bPlay.className = 'custom-op play';
+    bPlay.textContent = '试玩';
+    bPlay.addEventListener('click', () => enterLevel('custom', item.id));
+
+    const bEdit = document.createElement('button');
+    bEdit.className = 'custom-op edit';
+    bEdit.textContent = '编辑';
+    bEdit.addEventListener('click', () => {
+      location.href = `sculpt.html?edit=${encodeURIComponent(item.id)}`;
+    });
+
+    const bDel = document.createElement('button');
+    bDel.className = 'custom-op del';
+    bDel.textContent = '删除';
+    bDel.addEventListener('click', () => {
+      if (!confirm(`删除自定义关卡「${item.name || '未命名关卡'}」？`)) return;
+      const next = loadCustomLevels().filter(x => x.id !== item.id);
+      saveCustomLevels(next);
+      if (next.length && next[0].data) {
+        try { localStorage.setItem(CUSTOM_LEVEL_KEY, JSON.stringify(next[0].data)); } catch(e){}
+      }
+      refreshCustomBtn();
+      renderCustomLibrary();
+      toast('已删除');
+    });
+
+    ops.append(bPlay, bEdit, bDel);
+    row.append(left, ops);
+    box.appendChild(row);
+  });
+}
+
+function enterLevel(levelId, customId = null){
+  if (levelId === 'custom') {
+    const data = loadCustomData(customId);
+    if (!data || !data.objects || !data.objects.length) { toast('暂无自定义关卡，请先在编辑器创建'); return; }
+    state.customData = data;
+  }
+  buildLevel(levelId);
+}
+
+function updateHUD(){
+  elRemain.textContent = state.remain;
+  if (elRemainTotal) elRemainTotal.textContent = state.totalScrews;
+  const totalDemand = state.demandQueue.length;
+  const doneDemand = state.demandQueue.filter(d=>d.done).length;
+  elProgress.textContent = `${doneDemand}/${totalDemand}`;
+}
+
+function makeDemandSlotNode(slot, slotIndex, extraClass = '', forcedFilled = null){
+  const div = document.createElement('div');
+  if (!slot) {
+    div.className = 'demand-slot empty' + extraClass;
+    return div;
+  }
+  div.className = 'demand-slot' + (slotIndex===0 ? ' active' : '') + extraClass;
+  div.style.setProperty('--slot-c', slot.color.css);
+  const fillCount = forcedFilled == null ? slot.filled : forcedFilled;
+  const holes = [0,1,2].map(k => {
+    const filled = k < fillCount;
+    return `<div class="hole ${filled ? 'progress-filled' : ''}" ${filled ? `style="--slot-c:${slot.color.css}"` : ''}></div>`;
+  }).join('');
+  div.innerHTML = `<div class="target-screw"></div><div class="holes">${holes}</div>`;
+  return div;
+}
+
+function renderDemand(){
+  elDemandZone.innerHTML = '';
+  const now = performance.now();
+  state.demandSlots.forEach((slot, slotIndex) => {
+    const fx = state.demandSlotFX[slotIndex];
+    if (fx) {
+      if (now < fx.holdUntil) {
+        elDemandZone.appendChild(makeDemandSlotNode(fx.oldView, slotIndex, ' fx-complete', 3));
+        return;
+      }
+      if (now < fx.enterUntil) {
+        elDemandZone.appendChild(makeDemandSlotNode(slot, slotIndex, ' fx-enter'));
+        return;
+      }
+      delete state.demandSlotFX[slotIndex];
+    }
+    elDemandZone.appendChild(makeDemandSlotNode(slot, slotIndex));
+  });
+}
+function renderSpare(){
+  elSpareRow.innerHTML = '';
+  for (let i=0;i<SPARE_MAX;i++){
+    const cell = document.createElement('div');
+    cell.className = 'spare-cell';
+    const c = state.spares[i];
+    if (c) { cell.classList.add('filled'); cell.style.setProperty('--slot-c', c.css); }
+    elSpareRow.appendChild(cell);
+  }
+}
+
+let toastTimer = null;
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 1200); }
+function showOverlay(win){ document.getElementById('ov-emoji').textContent = win ? '🎉' : '💥'; document.getElementById('ov-title').textContent = win ? '胜利！' : '失败'; document.getElementById('ov-desc').textContent = win ? '所有螺丝已成功取出，干得漂亮！' : '备用槽已满，没有空间放置螺丝了。再试一次吧！'; overlay.style.display = 'flex'; }
+function hideOverlay(){ overlay.style.display = 'none'; }
+document.getElementById('ov-btn').addEventListener('click', () => {
+  if (state.currentLevel) enterLevel(state.currentLevel);
+});
+
+elExitLevel.addEventListener('click', () => showLevelSelect());
+document.querySelectorAll('.level-btn[data-level]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const raw = btn.dataset.level || '1';
+    const levelId = raw === 'custom' ? 'custom' : Number(raw);
+    enterLevel(levelId);
+  });
+});
+document.getElementById('btn-open-editor').addEventListener('click', () => { location.href = 'editor.html'; });
+document.getElementById('btn-open-sculpt').addEventListener('click', () => { location.href = 'sculpt.html'; });
+
+// 进入关卡选择时，若存在自定义关卡数据则显示试玩按钮 + 刷新关卡库列表
+function refreshCustomBtn(){
+  const data = loadCustomData();
+  const btn = document.getElementById('btn-play-custom');
+  if (btn) {
+    const has = !!(data && data.objects && data.objects.length);
+    btn.style.display = has ? 'block' : 'none';
+    if (has) {
+      const latest = loadCustomLevels().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0))[0];
+      btn.textContent = latest ? `▶ 试玩最新：${latest.name || '我的自定义关卡'}` : '▶ 试玩我的自定义关卡';
+    }
+  }
+  renderCustomLibrary();
+}
+
+const drag = { active:false, moved:false, lastX:0, lastY:0, startX:0, startY:0 };
+const DRAG_THRESHOLD = 6;
+function getXY(ev){ if (ev.touches && ev.touches.length) return { x: ev.touches[0].clientX, y: ev.touches[0].clientY }; if (ev.changedTouches && ev.changedTouches.length) return { x: ev.changedTouches[0].clientX, y: ev.changedTouches[0].clientY }; return { x: ev.clientX, y: ev.clientY }; }
+function onDown(ev){ if (ev.button !== undefined && ev.button !== 0) return; const { x, y } = getXY(ev); drag.active = true; drag.moved = false; drag.startX = drag.lastX = x; drag.startY = drag.lastY = y; }
+function onMove(ev){ if (!drag.active) return; const { x, y } = getXY(ev); const dx = x - drag.lastX, dy = y - drag.lastY; if (!drag.moved && Math.hypot(x - drag.startX, y - drag.startY) > DRAG_THRESHOLD) drag.moved = true; if (drag.moved) { orbit.theta -= dx * 0.008; orbit.phi -= dy * 0.008; orbit.phi = Math.max(orbit.minPhi, Math.min(orbit.maxPhi, orbit.phi)); updateCamera(); updateLightAzimuth(); if (ev.cancelable) ev.preventDefault(); } drag.lastX = x; drag.lastY = y; }
+function onUp(ev){ if (!drag.active) return; drag.active = false; if (!drag.moved) { const { x, y } = getXY(ev); tryPickAt(x, y); } }
+
+renderer.domElement.addEventListener('pointerdown', onDown);
+window.addEventListener('pointermove', onMove);
+window.addEventListener('pointerup', onUp);
+renderer.domElement.addEventListener('touchstart', onDown, { passive:true });
+window.addEventListener('touchmove', onMove, { passive:false });
+window.addEventListener('touchend', onUp);
+// 滚轮缩放：deltaY>0（向下滚）拉远、deltaY<0（向上滚）拉近，步长 0.03 让缩放更跟手。
+// 结果钳制在 [zoomMin, zoomMax]（随人头缩放联动），避免穿模或被雾吞没。
+renderer.domElement.addEventListener('wheel', (ev) => { ev.preventDefault(); orbit.radius += ev.deltaY * 0.03; orbit.radius = Math.max(orbit.zoomMin, Math.min(orbit.zoomMax, orbit.radius)); updateCamera(); }, { passive:false });
+window.addEventListener('resize', () => { camera.aspect = window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+function animate(){
+  requestAnimationFrame(animate);
+  // 人形模特按缩放渐隐（拉近越透明，拉远越清晰，平滑过渡）
+  if (mannequin && mannequin.visible) {
+    const mat = mannequin.userData.material;
+    const target = mannequinTargetOpacity();
+    mat.opacity += (target - mat.opacity) * 0.11;   // 渐隐响应放慢 50%
+    // 接近全不透明时走「实体渲染通道」(transparent=false)，避免透明通道在不同
+    // 视角下的前后排序/剔除假象导致整体突然消失；只有真正半透明(拉近)才切透明通道。
+    const wantTransparent = mat.opacity < 0.985;
+    if (mat.transparent !== wantTransparent) { mat.transparent = wantTransparent; mat.needsUpdate = true; }
+    // 一体化：始终写深度。半透明时也只显示最前表面，整体呈一个统一的半透明剪影，
+    // 而不是看穿内部颈/胸/头各网格、出现「分开」的层叠重影。
+    mat.depthWrite = true;
+  }
+  renderer.render(scene, camera);
+}
+
+// 从编辑器「试玩」跳转进来：?custom=1 直接进入自定义关卡
+const urlParams = new URLSearchParams(location.search);
+// 用 try/catch 包裹入口：任何关卡构建异常都不应阻断后续的 animate()，否则渲染循环
+// 永不启动 → 整页白屏。出错时回退到关卡选择，保证界面始终可见、可交互。
+try {
+  if (urlParams.get('custom') === '1' && loadCustomData()) {
+    enterLevel('custom');
+  } else {
+    showLevelSelect();
+  }
+} catch (err) {
+  console.error('进入关卡失败：', err);
+  try { showLevelSelect(); } catch (_) {}
+  try { alert('关卡加载失败，已返回关卡选择。\n' + (err && err.message ? err.message : err)); } catch (_) {}
+}
+animate();
+</script>
+</body>
+</html>

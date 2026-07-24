@@ -1,0 +1,147 @@
+:root {
+  --bg: #0e1020;
+  --panel: #181b30;
+  --panel2: #1f2340;
+  --line: #2c3157;
+  --text: #e8eaf6;
+  --muted: #9aa0c8;
+  --accent: #7c6cff;
+  --accent2: #ffb454;
+  --green: #4fd1a5;
+  --red: #ff6b8a;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  background: radial-gradient(1200px 600px at 70% -10%, #23264a 0%, var(--bg) 60%);
+  color: var(--text);
+  min-height: 100vh;
+}
+header {
+  padding: 22px 32px 12px;
+}
+header h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+.container {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 20px;
+  padding: 12px 32px 48px;
+  align-items: start;
+}
+@media (max-width: 980px) { .container { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+.card h2 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: var(--accent2);
+  display: flex; align-items: center; gap: 8px;
+}
+.card h2 .tag { font-size: 11px; color: var(--muted); font-weight: normal; }
+
+label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+input, select {
+  width: 100%;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 9px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #5a49e0);
+  width: 100%;
+  margin-top: 14px;
+  transition: transform .08s ease, filter .2s;
+}
+button:hover { filter: brightness(1.08); }
+button:active { transform: translateY(1px); }
+button.secondary { background: var(--panel2); border: 1px solid var(--line); color: var(--text); }
+
+.drop {
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+  padding: 22px;
+  text-align: center;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.drop.hover { border-color: var(--accent); background: rgba(124,108,255,.08); }
+.drop img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+.small { font-size: 11px; color: var(--muted); }
+.divider { text-align: center; color: var(--muted); font-size: 12px; margin: 16px 0; position: relative; }
+.divider::before, .divider::after {
+  content: ""; position: absolute; top: 50%; width: 38%; height: 1px; background: var(--line);
+}
+.divider::before { left: 0; } .divider::after { right: 0; }
+
+details.adv { margin-top: 8px; }
+details.adv summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+
+.status { font-size: 12px; margin-top: 8px; min-height: 16px; }
+.status.err { color: var(--red); }
+.status.ok { color: var(--green); }
+
+/* 结果区 */
+pre.report {
+  white-space: pre-wrap;
+  font-family: "Consolas", "Microsoft YaHei", monospace;
+  font-size: 13.5px;
+  line-height: 1.7;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 18px;
+  color: #dfe3ff;
+  max-height: 620px;
+  overflow: auto;
+}
+
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: center; }
+th { background: var(--panel2); color: var(--accent2); font-weight: 600; }
+td.retro { color: var(--red); }
+td.name { color: var(--accent2); font-weight: 600; }
+.apply { color: var(--green); } .separ { color: var(--accent2); }
+
+.chart-wrap { display: flex; justify-content: center; }
+canvas { max-width: 100%; }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.tabs .tab {
+  padding: 7px 14px; border-radius: 8px; font-size: 13px; cursor: pointer;
+  background: var(--panel2); border: 1px solid var(--line); color: var(--muted);
+}
+.tabs .tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.tabpage { display: none; }
+.tabpage.active { display: block; }
+
+.copybtn { width: auto; margin: 0 0 0 auto; display: block; padding: 6px 12px; font-size: 12px; }
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.toolbar h2 { margin: 0; }
