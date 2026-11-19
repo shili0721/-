@@ -5,58 +5,65 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>王昭幻 · 简历</title>
 <style>
-  :root{
-    --bg:#0d1117; --card:#161b22; --border:#30363d; --text:#e6edf3;
-    --muted:#8b949e; --accent:#58a6ff; --accent2:#a371f7;
-    --tag:#1f6feb22; --tag-text:#79c0ff;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
-    background:radial-gradient(1000px 500px at 50% -10%,#1b2233 0%,var(--bg) 55%);
-    color:var(--text);min-height:100vh;line-height:1.7;padding:32px 16px 72px;
-  }
-  .wrap{max-width:860px;margin:0 auto}
-  .back{display:inline-flex;align-items:center;gap:6px;color:var(--accent);text-decoration:none;font-size:14px;margin-bottom:20px}
-  .back:hover{gap:10px}
-  /* 头部 */
-  .head{
-    background:linear-gradient(120deg,#1f6feb22,#a371f722);
-    border:1px solid var(--border);border-radius:18px;padding:30px 32px;
-    display:flex;gap:24px;align-items:center;flex-wrap:wrap;
-  }
-  .head .name{font-size:32px;font-weight:800;letter-spacing:1px}
-  .head .role{color:var(--accent);font-size:15px;margin-top:4px;font-weight:600}
-  .head .info{flex:1;min-width:240px}
-  .contact{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
-  .contact span{font-size:13px;color:var(--muted);background:#0d111788;border:1px solid var(--border);padding:5px 12px;border-radius:20px}
-  .tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
-  .tags .t{font-size:12px;color:var(--tag-text);background:var(--tag);padding:4px 12px;border-radius:20px}
-  /* 区块 */
-  section{
-    margin-top:24px;background:var(--card);border:1px solid var(--border);
-    border-radius:16px;padding:24px 28px;
-  }
-  h2{
-    font-size:18px;font-weight:700;margin-bottom:16px;padding-left:12px;
-    border-left:4px solid var(--accent);display:flex;align-items:center;gap:8px;
-  }
-  .item{margin-bottom:20px}
-  .item:last-child{margin-bottom:0}
-  .item .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline}
-  .item .title{font-size:16px;font-weight:700}
-  .item .org{color:var(--accent2);font-weight:600;margin-left:8px;font-size:15px}
-  .item .date{color:var(--muted);font-size:13px;white-space:nowrap}
-  .item ul{margin-top:8px;padding-left:20px}
-  .item li{font-size:14px;color:#c9d1d9;margin-bottom:6px}
-  .item li b{color:var(--text)}
-  .note{font-size:13px;color:var(--muted);margin-top:6px;font-style:italic}
-  .skills{display:grid;gap:12px}
-  .skill-row{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
-  .skill-row .k{color:var(--muted);font-size:14px;min-width:72px;font-weight:600}
-  .skill-row .v{font-size:14px;color:#c9d1d9}
-  footer{text-align:center;margin-top:36px;color:var(--muted);font-size:13px}
-  @media(max-width:520px){.head{padding:22px}.name{font-size:26px}section{padding:20px}}
+:root{
+  --paper:#F7FBF8; --card:#FFFFFF; --tint:#EDF7EF; --tint-2:#E3F2E7;
+  --deco:#D3F2DE; --sage:#99C39E; --deep:#506850; --deep-2:#3F5442;
+  --ink:#1F2B22; --body-text:#3F4E43; --muted:#6B7C6F;
+  --line:#DCEBE0; --line-2:#CBE1D1; --accent:#506850; --accent2:#5C7F64;
+  --tag-text:#45624B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:radial-gradient(1000px 460px at 50% -12%,var(--deco) 0%,rgba(211,242,222,0) 60%) no-repeat,var(--paper);
+  color:var(--ink);min-height:100vh;line-height:1.7;padding:34px 16px 72px;
+  -webkit-font-smoothing:antialiased;color-scheme:light;
+}
+.wrap{max-width:860px;margin:0 auto}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--deep);text-decoration:none;font-size:14px;margin-bottom:20px}
+.back:hover{gap:10px}
+.head{
+  background:linear-gradient(120deg,#E7F5EA,#F9FCFA);
+  border:1px solid var(--line);border-radius:20px;padding:30px 32px;
+  display:flex;gap:24px;align-items:center;flex-wrap:wrap;
+  box-shadow:0 1px 2px rgba(63,84,66,.04);
+}
+.head .name{font-size:32px;font-weight:800;letter-spacing:1px;color:var(--ink)}
+.head .role{color:var(--deep);font-size:15px;margin-top:6px;font-weight:600}
+.head .info{flex:1;min-width:240px}
+.contact{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+.contact span{font-size:13px;color:var(--muted);background:#F2F9F4;border:1px solid var(--line);padding:5px 12px;border-radius:20px}
+.tags{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px}
+.tags .t{font-size:12px;color:var(--tag-text);background:var(--tint-2);padding:4px 12px;border-radius:20px;font-weight:600}
+section{
+  margin-top:24px;background:var(--card);border:1px solid var(--line);
+  border-radius:18px;padding:24px 28px;box-shadow:0 1px 2px rgba(63,84,66,.04);
+}
+h2{
+  font-size:18px;font-weight:700;margin-bottom:16px;padding-left:12px;
+  border-left:4px solid var(--sage);display:flex;align-items:center;gap:8px;color:var(--ink);
+}
+.item{margin-bottom:20px}
+.item:last-child{margin-bottom:0}
+.item .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;align-items:baseline}
+.item .title{font-size:16px;font-weight:700;color:var(--ink)}
+.item .org{color:var(--deep);font-weight:600;margin-left:8px;font-size:15px}
+.item .date{color:var(--muted);font-size:13px;white-space:nowrap}
+.item ul{margin-top:8px;padding-left:20px}
+.item li{font-size:14px;color:var(--body-text);margin-bottom:6px}
+.item li b{color:var(--ink)}
+.note{font-size:13px;color:var(--muted);margin-top:6px;font-style:italic}
+.skills{display:grid;gap:12px}
+.skill-row{display:flex;gap:10px;flex-wrap:wrap;align-items:baseline}
+.skill-row .k{color:var(--muted);font-size:14px;min-width:72px;font-weight:600}
+.skill-row .v{font-size:14px;color:var(--body-text)}
+footer{text-align:center;margin-top:36px;color:var(--muted);font-size:13px}
+@media(max-width:520px){
+  body{padding:26px 14px 60px}
+  .head{padding:22px}
+  .head .name{font-size:26px}
+  section{padding:20px}
+}
 </style>
 </head>
 <body>
