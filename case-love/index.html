@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>《光与夜之恋》抽卡机制拆解 · 王昭幻的作品集</title>
+<meta name="description" content="从感受层、行为层到 MDA 机制层，拆解《光与夜之恋》的抽卡、保底与书简兑换体系，并推演改动机制后的玩家体验变化。">
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --card-2:#1b2233; --border:#30363d;
+    --text:#e6edf3; --body:#cfd8e3; --muted:#8b949e;
+    --accent:#58a6ff; --accent2:#a371f7; --tag:#1f6feb22; --tag-text:#79c0ff; --gold:#f0d060;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#1b2233 0%,var(--bg) 60%) no-repeat,var(--bg);
+    color:var(--text);line-height:1.85;padding:44px 20px 90px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:860px;margin:0 auto}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .back{display:inline-block;font-size:14px;color:var(--muted);margin-bottom:30px}
+  .back:hover{color:var(--accent);text-decoration:none}
+  .kicker{display:inline-block;font-size:12px;letter-spacing:2px;color:var(--tag-text);background:var(--tag);padding:4px 12px;border-radius:20px;margin-bottom:16px}
+  h1{
+    font-size:36px;line-height:1.35;font-weight:800;letter-spacing:.5px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .lede{color:var(--muted);font-size:16px;margin-top:16px;max-width:700px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:3px 12px}
+  .toc{
+    margin:36px 0 8px;padding:18px 22px;border:1px solid var(--border);border-radius:14px;
+    background:linear-gradient(90deg,#1f6feb10,#a371f710);
+  }
+  .toc b{display:block;font-size:12px;letter-spacing:1.5px;color:var(--muted);font-weight:600;margin-bottom:10px}
+  .toc ol{list-style:none;display:flex;flex-wrap:wrap;gap:8px 24px}
+  .toc a{font-size:14.5px}
+  section{margin-top:58px}
+  h2{
+    font-size:23px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    padding-bottom:12px;border-bottom:1px solid var(--border);line-height:1.5;
+  }
+  h2 .num{font-size:12.5px;font-weight:700;color:var(--accent);background:var(--tag);padding:2px 9px;border-radius:6px;letter-spacing:1px}
+  h2 small{font-size:13px;font-weight:400;color:var(--muted)}
+  h3{font-size:17px;margin:34px 0 10px;color:#dbe6f3;display:flex;align-items:center;gap:10px}
+  h3::before{content:"";flex:none;width:4px;height:17px;border-radius:2px;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+  p{margin:11px 0;color:var(--body)}
+  strong{color:#fff;font-weight:600}
+  ul.clean{list-style:none;margin:12px 0}
+  ul.clean li{position:relative;padding-left:20px;margin:9px 0;color:var(--body)}
+  ul.clean li::before{content:"";position:absolute;left:3px;top:.72em;width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.85}
+  .feels{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:22px 0 6px}
+  .feel{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:0 12px 12px 0;padding:18px 20px}
+  .feel h4{font-size:15px;margin-bottom:6px;color:#eaf2fb}
+  .feel p{font-size:13.5px;color:var(--muted);margin:0;line-height:1.8}
+  .tw{overflow-x:auto;margin:20px 0;border:1px solid var(--border);border-radius:12px}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+  th{text-align:left;background:var(--card-2);color:#cfe3ff;font-weight:600;padding:12px 15px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:12px 15px;border-bottom:1px solid #21262d;vertical-align:top;color:var(--body);line-height:1.75}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:#ffffff05}
+  .diagram-wrap{overflow-x:auto;margin:20px 0;padding:22px 20px;background:var(--card);border:1px solid var(--border);border-radius:14px}
+  .diagram{display:grid;grid-template-columns:max-content 46px max-content 46px max-content;gap:12px 0;align-items:center;min-width:640px}
+  .dg-src{grid-row:1 / span 2;align-self:center}
+  .dg-a{color:var(--accent);font-size:13px;text-align:center;opacity:.8}
+  .dg-box{
+    background:#0f1621;border:1px solid var(--border);border-radius:10px;padding:10px 16px;
+    font-size:14px;color:#e6edf3;display:inline-flex;flex-direction:column;gap:2px;
+  }
+  .dg-box small{font-size:11.5px;color:var(--muted)}
+  .dg-box.hl{border-color:#1f6feb88;box-shadow:0 0 0 3px #1f6feb14}
+  .sys{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px 16px;margin:18px 0}
+  .sys-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .sys-no{font-size:12px;color:var(--gold);background:#f0d0601a;border-radius:6px;padding:2px 9px;font-weight:700}
+  .sys-head h4{font-size:16px;color:#eaf2fb}
+  .kv{display:grid;grid-template-columns:118px 1fr;gap:8px 18px;margin:10px 0 0}
+  .kv dt{color:var(--accent);font-size:14px;font-weight:600}
+  .kv dd{color:var(--body);font-size:14.5px;line-height:1.8}
+  .why{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:20px 0}
+  .why div{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+  .why b{display:block;color:#eaf2fb;font-size:15px;margin-bottom:4px}
+  .why p{font-size:13.5px;color:var(--muted);margin:0;line-height:1.8}
+  .note{margin:22px 0;padding:16px 20px;border-left:3px solid var(--accent2);background:#a371f70e;border-radius:0 10px 10px 0;font-size:14px;color:var(--body)}
+  footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:14px;align-items:center;color:var(--muted);font-size:13.5px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+    color:#fff;font-weight:600;font-size:14px;padding:10px 20px;border-radius:9px;transition:.2s ease;
+  }
+  .btn:hover{text-decoration:none;transform:translateY(-2px);box-shadow:0 8px 20px #58a6ff44}
+  @media(max-width:600px){
+    body{padding:30px 16px 70px}
+    h1{font-size:26px}
+    .kv{grid-template-columns:1fr;gap:2px 0}
+    .kv dd{margin-bottom:10px}
+    .sys{padding:18px}
+    .toc{padding:16px 18px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../">← 返回作品集</a>
+
+  <header>
+    <div class="kicker">系统拆解 · SYSTEM TEARDOWN</div>
+    <h1>《光与夜之恋》抽卡机制拆解</h1>
+    <p class="lede">拆一个我玩了 5 年的游戏：先写「它让我有什么感觉」，再倒推「我做了什么才得到这种感觉」，最后落到 MDA 机制层，回答一个策划最该回答的问题——为什么必须这么设计。</p>
+    <div class="meta">
+      <span>游戏：光与夜之恋</span>
+      <span>框架：感受层 · 行为层 · MDA</span>
+      <span>关键词：抽卡 · 保底 · 付费结构</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <b>目录</b>
+    <ol>
+      <li><a href="#feel">01 感受层</a></li>
+      <li><a href="#act">02 行为层</a></li>
+      <li><a href="#mech">03 机制层（MDA）</a></li>
+    </ol>
+  </nav>
+
+  <section id="feel">
+    <h2><span class="num">01</span>感受层<small>这款游戏带给我什么感觉</small></h2>
+    <div class="feels">
+      <div class="feel">
+        <h4>开卡瞬间的肾上腺素</h4>
+        <p>看抽卡图标判定是否抽到了 6 星卡，看具体的卡面判定本命 vs 歪卡，情绪极值。</p>
+      </div>
+      <div class="feel">
+        <h4>囤抽卡资源时的克制期待</h4>
+        <p>为卡池忍住不花，储蓄动机被稀缺性放大。</p>
+      </div>
+      <div class="feel">
+        <h4>晒卡 / 诉苦的社交宣泄</h4>
+        <p>抽卡结果天然成谈资，UGC 传播。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="act">
+    <h2><span class="num">02</span>行为层<small>做了什么 → 带来什么情感</small></h2>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th style="width:26%">行为</th><th style="width:14%">情感</th><th>诉求</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>攒小熊星座等混池 / 专属池</td><td>期待 + 克制</td><td>稀缺性制造储蓄动机</td></tr>
+          <tr><td>卡池开前算保底进度</td><td>精打细算</td><td>理性告诉玩家还差多少资源才能保证保底、需要充多少钱；情感促使玩家想要抽卡下池子，控制沉没成本</td></tr>
+          <tr><td>完成日常肝 &amp; 活动肝</td><td>枯燥但有收集感</td><td>资源稀缺 + 日活锚点，让玩家体会到「我在为这段感情付出」</td></tr>
+          <tr><td>抽卡前录屏、抽后晒欧 / 诉苦</td><td>社交宣泄</td><td>UGC 传播，让玩家之间比较，进而产生更多的欣喜 / 失落，加强感极值</td></tr>
+          <tr><td>为冲保底首充 / 买礼包</td><td>决心</td><td>情感付费转化</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="mech">
+    <h2><span class="num">03</span>机制层（MDA）</h2>
+
+    <h3>3.1 核心系统耦合图</h3>
+    <div class="diagram-wrap">
+      <div class="diagram">
+        <div class="dg-src dg-box hl">抽卡<small>付费 / 免费资源</small></div>
+        <div class="dg-a">├──▶</div>
+        <div class="dg-box">产出：男主卡</div>
+        <div class="dg-a"></div>
+        <div class="dg-a"></div>
+        <div class="dg-a">└──▶</div>
+        <div class="dg-box">产出：书简<small>按抽卡次数掉落</small></div>
+        <div class="dg-a">──▶</div>
+        <div class="dg-box">书简兑换商店<small>140 书简 / 张卡面</small></div>
+      </div>
+    </div>
+
+    <h3>3.2 抽卡机制构成</h3>
+    <ul class="clean">
+      <li><strong>卡池类型：</strong>常驻池 / 活动池</li>
+      <li><strong>概率公示：</strong>3 星 / 4 星 / 5 星 / 6 星分层，6 星中分为常驻卡面 / 限定卡面（低概率）</li>
+      <li><strong>保底机制：</strong>6 星保底（100 抽必出 6 星，但不一定是限定）+ 限定保底（140 抽得到的书简兑换限定卡面）</li>
+      <li><strong>付费结构：</strong>免费小熊（慢）/ 充值小熊（快）/ 抽卡礼包 / 月卡</li>
+    </ul>
+
+    <h3>3.3 逐系统拆解</h3>
+
+    <div class="sys">
+      <div class="sys-head"><span class="sys-no">系统 ①</span><h4>抽卡氪金系统</h4></div>
+      <dl class="kv">
+        <dt>机制</dt>
+        <dd>玩家在拥有资源之后可以参与抽卡，满 100 抽可以获得一张随机 6 星，6 星卡里面会出常驻卡面 / 限定卡面。</dd>
+        <dt>交互</dt>
+        <dd>玩家囤资源、计算微氪后获得收益，选择性价比最高的时间进行氪金、晒结果。</dd>
+        <dt>体验</dt>
+        <dd>稀缺资源 → 抽卡期待 → 抽卡后：狂喜 / 失落。</dd>
+        <dt>策划为什么这么设计</dt>
+        <dd>纯肝党只能参加小部分卡池，保证自己可以拿到卡；氪金党氪金金额过大，部分玩家负担不起，因此大部分玩家都选择肝 + 氪——氪金部分可以保证 ARPPU，肝日活可以保证用户粘度。</dd>
+      </dl>
+    </div>
+
+    <div class="sys">
+      <div class="sys-head"><span class="sys-no">系统 ②</span><h4>书简保底兑换商店</h4></div>
+      <dl class="kv">
+        <dt>机制</dt>
+        <dd>抽卡抽数 1:1 兑换书简，如果 140 内抽没有抽到玩家想要的卡面，就可以拿 140 书简兑换想要的卡面。</dd>
+        <dt>交互</dt>
+        <dd>玩家抽卡攒书简、计算这次抽卡是继续抽还是拿书简换保底离开。</dd>
+        <dt>体验</dt>
+        <dd>安全感：知道自己多少资源敢下池子。</dd>
+        <dt>策划为什么这么设计</dt>
+        <dd>保证付费数量，当玩家资源数量不足时，知道氪金多少可以拿到卡，减少因抽不到卡面破防而流失的用户。</dd>
+      </dl>
+    </div>
+
+    <h3>3.4 预测体验（沙盘推演：改一个机制会怎样）</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:24%">改动</th><th style="width:30%">玩家变化</th><th>体验变化</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>去掉 6 星保底，但是概率变高</td>
+            <td>从「算着花」变成「赌着花」，短期付费冲动可能涨，但沉没成本的安全没了</td>
+            <td>开卡从「倒计时狂欢」变成「随缘」，期待感被稀释；单次爽感可能上升：「欧」的瞬间更多；长期焦虑上升，越抽越怕「这把没保底会不会血亏」</td>
+          </tr>
+          <tr>
+            <td>6 星保底门槛变低，但是取消限定保底</td>
+            <td>轻 / 中度用户更愿意小氪，重度用户回到「赌一把」心态，一旦连续歪卡，信任损耗更狠</td>
+            <td>轻 / 中度玩家早出卡有正反馈，抽卡爽感提前；重度玩家没抽到限定卡极易转去吐槽 / 弃坑</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>3.5 策划为什么这么设计</h3>
+    <div class="why">
+      <div><b>拉 ARPPU</b><p>低概率 + 限定，逼中氪以上用户为「限定卡面」持续投入。</p></div>
+      <div><b>控流失下限</b><p>保底 + 限定兑换，防止非酋彻底弃坑，保住长线 LTV。</p></div>
+      <div><b>制造期待感</b><p>卡池周期 + 囤资源机制，把日活变成卡池周期的锚点，拉长游戏生命周期。</p></div>
+    </div>
+
+    <div class="note">
+      <strong>拆解路径：</strong>先记录情绪峰值 → 找到触发它的那一步操作 → 拆到可配置的参数（概率 / 保底 / 兑换）→ 再做一次反事实推演：把某个参数改掉，玩家行为和情绪会怎么变。
+    </div>
+  </section>
+
+  <footer>
+    <a class="btn" href="光与夜之恋游戏系统拆解案.docx" download>下载原文（.docx）</a>
+    <a href="../">返回作品集</a>
+    <span style="margin-left:auto">王昭幻 · wangzhaohuan0626@outlook.com</span>
+  </footer>
+
+</div>
+</body>
+</html>

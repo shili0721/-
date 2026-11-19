@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游戏策划思考 · 王昭幻的作品集</title>
+<meta name="description" content="两篇游戏策划笔记：从玩家早已习惯的「妥协」里找到可修的系统问题，以及把 2D 游戏的核心体验重新发明成 3D 玩法。">
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --card-2:#1b2233; --border:#30363d;
+    --text:#e6edf3; --body:#cfd8e3; --muted:#8b949e;
+    --accent:#58a6ff; --accent2:#a371f7; --tag:#1f6feb22; --tag-text:#79c0ff; --gold:#f0d060;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#1b2233 0%,var(--bg) 60%) no-repeat,var(--bg);
+    color:var(--text);line-height:1.85;padding:44px 20px 90px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:860px;margin:0 auto}
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .back{display:inline-block;font-size:14px;color:var(--muted);margin-bottom:30px}
+  .back:hover{color:var(--accent);text-decoration:none}
+  .kicker{display:inline-block;font-size:12px;letter-spacing:2px;color:var(--tag-text);background:var(--tag);padding:4px 12px;border-radius:20px;margin-bottom:16px}
+  h1{
+    font-size:36px;line-height:1.35;font-weight:800;letter-spacing:.5px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .lede{color:var(--muted);font-size:16px;margin-top:16px;max-width:700px}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+  .meta span{font-size:12.5px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:3px 12px}
+  .toc{
+    margin:36px 0 8px;padding:18px 22px;border:1px solid var(--border);border-radius:14px;
+    background:linear-gradient(90deg,#1f6feb10,#a371f710);
+  }
+  .toc b{display:block;font-size:12px;letter-spacing:1.5px;color:var(--muted);font-weight:600;margin-bottom:10px}
+  .toc ol{list-style:none;display:flex;flex-wrap:wrap;gap:8px 24px}
+  .toc a{font-size:14.5px}
+  section{margin-top:58px}
+  h2{
+    font-size:23px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    padding-bottom:12px;border-bottom:1px solid var(--border);line-height:1.5;
+  }
+  h2 .num{font-size:12.5px;font-weight:700;color:var(--accent);background:var(--tag);padding:2px 9px;border-radius:6px;letter-spacing:1px}
+  h3{font-size:17px;margin:34px 0 10px;color:#dbe6f3;display:flex;align-items:center;gap:10px}
+  h3::before{content:"";flex:none;width:4px;height:17px;border-radius:2px;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+  p{margin:11px 0;color:var(--body)}
+  strong{color:#fff;font-weight:600}
+  .game{font-size:13.5px;color:var(--muted);margin:-4px 0 8px}
+  .quote{
+    margin:20px 0;padding:20px 24px;border-left:3px solid var(--accent);
+    background:linear-gradient(90deg,#1f6feb12,#a371f70a);border-radius:0 12px 12px 0;
+    font-size:16px;color:#e8eef6;line-height:1.9;
+  }
+  .quote b{display:block;font-size:11.5px;letter-spacing:1.5px;color:var(--accent);font-weight:600;margin-bottom:6px}
+  .stat{
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:20px 0;padding:18px 22px;
+    border:1px solid #f0d06033;background:#f0d0600d;border-radius:12px;
+  }
+  .stat .n{font-size:26px;font-weight:800;color:var(--gold);line-height:1.2;letter-spacing:.5px}
+  .stat .t{font-size:13.5px;color:var(--muted);flex:1;min-width:200px;line-height:1.7}
+  .tw{overflow-x:auto;margin:20px 0;border:1px solid var(--border);border-radius:12px}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
+  th{text-align:left;background:var(--card-2);color:#cfe3ff;font-weight:600;padding:12px 15px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:12px 15px;border-bottom:1px solid #21262d;vertical-align:top;color:var(--body);line-height:1.75}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:#ffffff05}
+  td.k{color:#eaf2fb;font-weight:600;white-space:nowrap}
+  td.w{color:var(--gold);font-weight:700;white-space:nowrap;text-align:right}
+  .mock{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin:18px 0}
+  .mock div{
+    background:#0f1621;border:1px solid var(--border);border-radius:11px;padding:14px 16px;font-size:13.5px;color:var(--body);
+  }
+  .mock b{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px}
+  .mock .ok{color:#7ee787;font-weight:600}
+  .mock .warn{color:#f0d060;font-weight:600}
+  .benefits{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:18px 0}
+  .benefits div{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 16px;font-size:13.5px;color:var(--body);line-height:1.75}
+  .benefits span{color:var(--accent);font-weight:700;margin-right:4px}
+  .invent{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin:14px 0}
+  .invent h4{font-size:15.5px;color:#eaf2fb;margin-bottom:12px;display:flex;gap:8px;align-items:center}
+  .invent h4 i{font-style:normal;font-size:11.5px;color:var(--gold);background:#f0d0601a;border-radius:5px;padding:2px 8px;font-weight:700}
+  .invent dl{display:grid;grid-template-columns:88px 1fr;gap:8px 16px;margin:0}
+  .invent dt{font-size:13px;color:var(--accent);font-weight:600}
+  .invent dd{font-size:14px;color:var(--body);line-height:1.8}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+  .split > div{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
+  .split h4{font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;color:#eaf2fb}
+  .split .drop h4{color:#ff9b9b}
+  .split .up h4{color:#7ee787}
+  .split ul{list-style:none}
+  .split li{position:relative;padding-left:16px;margin:8px 0;font-size:13.5px;color:var(--body);line-height:1.75}
+  .split li::before{content:"·";position:absolute;left:2px;color:var(--muted)}
+  .note{margin:22px 0;padding:16px 20px;border-left:3px solid var(--accent2);background:#a371f70e;border-radius:0 10px 10px 0;font-size:14px;color:var(--body)}
+  footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--border);display:flex;flex-wrap:wrap;gap:14px;align-items:center;color:var(--muted);font-size:13.5px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--accent),var(--accent2));
+    color:#fff;font-weight:600;font-size:14px;padding:10px 20px;border-radius:9px;transition:.2s ease;
+  }
+  .btn:hover{text-decoration:none;transform:translateY(-2px);box-shadow:0 8px 20px #58a6ff44}
+  @media(max-width:600px){
+    body{padding:30px 16px 70px}
+    h1{font-size:26px}
+    .split{grid-template-columns:1fr}
+    .invent dl{grid-template-columns:1fr}
+    .invent dd{margin-bottom:8px}
+    .stat .n{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <a class="back" href="../">← 返回作品集</a>
+
+  <header>
+    <div class="kicker">设计思考 · DESIGN THINKING</div>
+    <h1>游戏策划思考</h1>
+    <p class="lede">两篇没有停在「玩后感」的笔记：一篇从玩家早已习惯的「妥协」里找到可修的系统问题，一篇把 2D 的核心体验重新发明成 3D 玩法。</p>
+    <div class="meta">
+      <span>案例 ① 光与夜之恋 · Auto 战斗</span>
+      <span>案例 ② 星露谷物语 · 2D → 3D</span>
+      <span>关键词：体验漏洞 · 权重方案 · 翻译与发明</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <b>目录</b>
+    <ol>
+      <li><a href="#case1">一、找出一个玩家早已习惯的「妥协」</a></li>
+      <li><a href="#case2">二、把 2D 的核心体验重新发明成 3D 玩法</a></li>
+    </ol>
+  </nav>
+
+  <section id="case1">
+    <h2><span class="num">01</span>找出一个玩家早已习惯的「妥协」</h2>
+    <p class="game">游戏：《光与夜之恋》</p>
+
+    <div class="quote">
+      <b>核心观点</b>
+      玩家在 Auto 翻车时从不抱怨系统，只反思自己。这个沉默掩盖了一个可修复的设计问题：AI 选了「安全」而非「最优」。而修复它的关键不在改 AI 本身，在帮玩家提前判断自己该不该点「自动」。
+    </div>
+
+    <h3>1. 具体瞬间</h3>
+    <p><strong>情景：</strong>（灵犀 = 有战斗数值的卡牌，泡泡 = 需要击败的敌人，通关条件 = 卡牌总攻击 &gt; 泡泡总血量）</p>
+    <p>刷活动关卡拿五星卡奖励。进战斗，战力差不多够了，点自动省时间。</p>
+    <p><strong>发生了什么：</strong>自动模式的算法和你预想的完全不同。你想用 A 属性卡去打 A 属性泡泡，系统却因为 B 属性泡泡血量更低，先打了 B 泡泡，导致属性不匹配，伤害溢出。剩余次数被无意义消耗，泡泡没清完。</p>
+    <p>之后你退出重进，选择手动模式，过了。但问题是这个关卡我要反复刷十几次，每个活动周期至少发生 15 次。</p>
+
+    <div class="stat">
+      <span class="n">15 次 × 1 分钟 ≈ 15 分钟</span>
+      <span class="t">按每次翻车需 1 分钟重打估算，这是每个活动周期白白损失的时间——已经是玩家一天的日活时长。对一款主打休闲的乙女游戏，这是不可接受的体验损耗。</span>
+    </div>
+
+    <h3>2. 洞察</h3>
+    <p>Auto 的策略很简单：先打血最少的。这是最不会出错的兜底逻辑，练度碾压时完全没问题，玩家感知不到。但属性匹配才是这游戏战斗的核心规则：同属性伤害最高。</p>
+    <p><strong>妥协部分：</strong>Auto 选了「通用安全策略」而不是「游戏规则最优策略」。因为属性匹配需要考虑泡泡分批刷新、技能与普攻两套目标选择逻辑的重合、以及自动战斗代码在主线 / 活动 / 爬塔等多个玩法间的共享，任何改动都可能引入跨玩法 Bug。</p>
+    <p><strong>为什么不抱怨：</strong>因为这游戏的核心是卡面和剧情，战斗只是辅助系统。关卡没有通过的话，玩家只会觉得「我练度还不够」，然后默默切手动。再加上沉没成本：已经花了时间，放弃只会既浪费时间又拿不到奖励。</p>
+
+    <h3>3. 改进方案：两个方面</h3>
+    <p><strong>第一方面：给 Auto 增加属性匹配优先判断。</strong></p>
+    <div class="tw">
+      <table>
+        <thead><tr><th>条件</th><th style="text-align:right;width:90px">权重</th></tr></thead>
+        <tbody>
+          <tr><td class="k">灵犀主属性 = 泡泡属性</td><td class="w">+80</td></tr>
+          <tr><td class="k">灵犀副属性 = 泡泡属性</td><td class="w">+50</td></tr>
+          <tr><td class="k">泡泡可被一击击杀</td><td class="w">+40</td></tr>
+          <tr><td class="k">泡泡血量最低（兜底）</td><td class="w">+20</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note"><strong>PS：</strong>权重方案仅优化普攻目标选择。技能释放时机与普攻为独立模块，打通成本过高，本方案暂不纳入。</div>
+
+    <p><strong>第二方面：在进入关卡前的卡牌选择界面增加关卡模拟提示。</strong></p>
+    <div class="mock">
+      <div>
+        <b>示例 A</b>
+        属性覆盖度 <span class="ok">6/6</span>，战力 20000/12000<br>
+        → <span class="ok">推荐自动</span>
+      </div>
+      <div>
+        <b>示例 B</b>
+        属性覆盖度 <span class="warn">4/6</span>，战力 13000/12000<br>
+        → <span class="warn">建议手动</span>（缺 A 属性、B 属性）
+      </div>
+    </div>
+
+    <p><strong>好处：</strong></p>
+    <div class="benefits">
+      <div><span>①</span>玩家在点「自动」之前就能判断这次能不能过。</div>
+      <div><span>②</span>玩家看到「缺少 A 属性」，会去培养 A 属性卡，这会引导玩家行为，而非强制要求。</div>
+      <div><span>③</span>不改系统架构，不加 UI 负担。</div>
+      <div><span>④</span>上线后可以监控两个核心数据：自动战斗成功率变化、模拟推荐为「手动」时的关卡放弃率。若放弃率上升超 5%，说明提示文案过于劝退，需调整。</div>
+    </div>
+
+    <div class="quote">
+      <b>总结</b>
+      当系统存在「安全但次优」的兜底逻辑时，直接修改底层代码的风险往往大于收益。更务实的路径是：在操作入口增加预判层，让玩家在游玩前获得更多信息。<br><br>
+      这个思路的适用场景不限于 Auto 战斗，任何「玩家已经习惯忍受、但根源在系统不敢改」的体验漏洞，都可以用「预判提示 + 数据监控」的双层方案来低风险修复。
+    </div>
+  </section>
+
+  <section id="case2">
+    <h2><span class="num">02</span>把一个 2D 游戏的核心体验重新发明成 3D 玩法</h2>
+    <p class="game">游戏：《星露谷物语》</p>
+
+    <div class="quote">
+      <b>核心观点</b>
+      2D 转 3D 的价值不在「换表现形式」，而在「用 3D 独有的维度，发明 2D 做不出的新决策」。
+    </div>
+
+    <h3>一、保留的「魂」（不变）</h3>
+    <p>星露谷的魂是「不催你」：做你想做的，而不是你该做的。没有饥饿值、没有倒计时，唯一约束是体力条和天黑回家，这是节奏而非催促——永远有第二个春天在等。</p>
+
+    <h3>二、分清两层：翻译 vs 发明（关键分界）</h3>
+    <p><strong>翻译层：表现形式变了，规则没变。</strong></p>
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:22%">维度</th><th>2D</th><th>3D</th></tr></thead>
+        <tbody>
+          <tr><td class="k">信息来源</td><td>全知摊开</td><td>第一人称隐藏</td></tr>
+          <tr><td class="k">操作</td><td>点格子</td><td>身体移动</td></tr>
+          <tr><td class="k">视角</td><td>俯视</td><td>第一人称</td></tr>
+          <tr><td class="k">声音</td><td>循环 BGM</td><td>空间声场</td></tr>
+          <tr><td class="k">NPC</td><td>像素</td><td>完整空间存在</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><strong>发明层：把 3D 独有维度变成新决策变量。</strong></p>
+    <p>3D 独有变量：高度 / 垂直、遮挡 / 视线、距离 / 在场、朝向 / 面向、空间关系。下面三个系统，每个都回答同一个问题——「玩家多了什么 2D 没有的决策」。</p>
+
+    <h3>三、三个「发明」</h3>
+
+    <div class="invent">
+      <h4><i>发明 ①</i>种植：光照遮挡 + 海拔朝向 → 空间规划决策</h4>
+      <dl>
+        <dt>新规则</dt><dd>高大作物（玉米 / 向日葵）会遮挡矮作物的光照；山坡有阳坡 / 阴坡，朝向影响生长。</dd>
+        <dt>新决策</dt><dd>种什么、种在哪个坡、高矮怎么错开——布局从「格子规划」升级为「空间规划」。</dd>
+        <dt>2D 做不到</dt><dd>2D 格子光照均一、无真实高度，所有位置种植条件相同。</dd>
+      </dl>
+    </div>
+
+    <div class="invent">
+      <h4><i>发明 ②</i>钓鱼：空间选鱼 → 选址 + 深度决策</h4>
+      <dl>
+        <dt>新规则</dt><dd>水体有真实垂直分层（表层 / 中层 / 底层）；鱼是空间实体，分布在特定水深 / 水域 / 地形。</dd>
+        <dt>新决策</dt><dd>选站位 + 选下竿深度，决定钓到什么鱼；观察水面鱼影 / 波纹判断鱼群（观察即玩法）。</dd>
+        <dt>2D 做不到</dt><dd>2D 钓鱼是「抛竿 → 小游戏 roll 鱼种」，鱼无空间位置，只能赌运气、不能「选鱼」。</dd>
+      </dl>
+    </div>
+
+    <div class="invent">
+      <h4><i>发明 ③</i>社交：共处 / 距离即好感 → 空间在场决策</h4>
+      <dl>
+        <dt>新规则</dt><dd>物理靠近、共处时长本身是好感度来源，不再只有送礼。</dd>
+        <dt>新决策</dt><dd>每天跟谁同路、坐哪张长椅。</dd>
+        <dt>2D 做不到</dt><dd>2D 里好感 = 送礼唯一来源。</dd>
+      </dl>
+    </div>
+
+    <h3>四、大胆取舍</h3>
+    <div class="split">
+      <div class="drop">
+        <h4>放弃</h4>
+        <ul>
+          <li>农场全知视角（效率降，但日常操作变仪式感）</li>
+          <li>部分 2D 小游戏（祝尼魔赛车等，重做成本高、贡献小）</li>
+          <li>六种农场砍到四种（沙滩 / 河边 / 森林农场偏肝，与「不催你」的魂互斥）</li>
+          <li>时间的精确掌控（弱化时钟，靠天色体感判断，天黑回家）</li>
+        </ul>
+      </div>
+      <div class="up">
+        <h4>放大</h4>
+        <ul>
+          <li>季节变感官体验（花粉 / 蝉鸣 / 金黄 / 雪声）</li>
+          <li>声音变信息系统（辨方向、传信息，从氛围到信息）</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <a class="btn" href="游戏策划思考.docx" download>下载原文（.docx）</a>
+    <a href="../">返回作品集</a>
+    <span style="margin-left:auto">王昭幻 · wangzhaohuan0626@outlook.com</span>
+  </footer>
+
+</div>
+</body>
+</html>
